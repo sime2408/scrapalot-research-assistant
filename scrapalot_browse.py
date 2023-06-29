@@ -5,7 +5,6 @@ import textwrap
 from deep_translator import GoogleTranslator
 
 from scripts.app_environment import translate_src, translate_dst, translate_docs, ingest_chunk_size
-from scripts.app_text_to_speech import speak_chunk
 from scripts.app_utils import load_single_document
 
 
@@ -128,17 +127,13 @@ def run_program():
                         wrapper = textwrap.TextWrapper(initial_indent='\033[37m', subsequent_indent='\033[37m',
                                                        width=120)
                         print(f"{wrapper.fill(justified_content)}\033[0m\n")
-                        print(f'\n\033[94mPress "n" -> next, "b" -> back, "s" -> speak, or any other key to go back '
+                        print(f'\n\033[94mPress "n" -> next, "b" -> back, or any other key to go back '
                               f'to the main directory: \033[0m')
 
                         # Use the input function to wait for user input
                         user_input = input()
 
                         if user_input.lower() == 'n':
-                            start_index = end_index
-                            continue
-                        elif user_input.lower() == 's':
-                            speak_chunk(justified_content)
                             start_index = end_index
                             continue
                         elif user_input.lower() == 'b':
