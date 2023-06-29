@@ -528,6 +528,6 @@ but for privacy; but it is possible to use different models and vector stores to
 
 <table>
   <tr style="border: 0">
-    <td style="border: 0 !important; text-align: center;"><a href="https://github.com/corran123"><img src="https://github.com/corran123.png" width="50px;" alt=""/><br /><sub><b>corran123</b></sub></a><br /></td>
+    <td style="border: 0 !important; text-align: center;"><a href="https://github.com/corranmac"><img src="https://github.com/corran123.png" width="50px;" alt=""/><br /><sub><b>corranmac</b></sub></a><br /></td>
   </tr>
 </table>
