@@ -410,6 +410,12 @@ MODEL_ID_OR_PATH=models/ggml-vic13b-q5_1.bin
 
 Set `OS_RUNNING_ENVIRONMENT=windows` inside `.env` file
 
+It is important that you have proper torch version installed to recognize CUDA:
+
+```
+pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+```
+
 ```shell
 pip3 install -r requirements.txt
 ```
