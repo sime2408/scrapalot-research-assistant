@@ -112,13 +112,13 @@ It is recommended that you create a virtual environment to install all dependenc
 - For conda environment:
 
 ```shell
-conda create --name scrapalot-chat-pro python=3.10.11 && conda activate scrapalot-chat-pro
+conda create --name scrapalot-research-assistant python=3.10.11 && conda activate scrapalot-research-assistant
 ```
 
 If you want to remove the conda environment, run this:
 
 ```shell
-conda remove -n scrapalot-chat-pro --all
+conda remove -n scrapalot-research-assistant --all
 ```
 
 If you use conda environment, and you want to parse `epub` books, you'll have to install `pypandoc` and `pandoc` inside conda environment.
