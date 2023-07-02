@@ -39,6 +39,8 @@ INGEST_CHUNK_SIZE: default chunk size of texts when performing an ingest
 INGEST_OVERLAP: default chunk overlap of texts when performing an ingest
 INGEST_TARGET_SOURCE_CHUNKS: The amount of chunks (sources) that will be used to answer a question, defaults to 6 (decrese if you have less resources).
 
+GPU_IS_ENABLED: Whether or not your GPU environment is enabled.
+
 MODEL_TYPE: supports llamacpp, gpt4all, openai, huggingface
 MODEL_ID_OR_PATH: Path to your gpt4all or llamacpp supported LLM
 MODEL_N_CTX: Token context window. Maximum token limit for the LLM model
@@ -63,8 +65,6 @@ CLI_COLUMN_NUMBER: How many columns by default will be shown in CLI
 DB_GET_ONLY_RELEVANT_DOCS: If this is set to `true` only documents will be returned from the database. Program won't go through the process of sending chunks to the LLM.
 
 OPENAI_USE: Whether to use this model or not, if yes, different embeddings should be used
-
-GPU_IS_ENABLED: Whether or not your GPU environment is enabled.
 
 OPENAI_API_KEY: OpenAI key for http calls to OpenAI GPT-4 API
 HUGGINGFACEHUB_API_TOKEN: Token to connect to huggingface and download the models
@@ -112,13 +112,13 @@ It is recommended that you create a virtual environment to install all dependenc
 - For conda environment:
 
 ```shell
-conda create --name scrapalot-chat python=3.10.11 && conda activate scrapalot-chat
+conda create --name scrapalot-chat-pro python=3.10.11 && conda activate scrapalot-chat-pro
 ```
 
 If you want to remove the conda environment, run this:
 
 ```shell
-conda remove -n scrapalot-chat --all
+conda remove -n scrapalot-chat-pro --all
 ```
 
 If you use conda environment, and you want to parse `epub` books, you'll have to install `pypandoc` and `pandoc` inside conda environment.
@@ -390,7 +390,7 @@ pip3 uninstall llama-cpp-python
 Install llama:
 
 ```shell
-CMAKE_ARGS="-DLLAMA_CUBLAS=on" FORCE_CMAKE=1 pip install --upgrade --force-reinstall llama-cpp-python==0.1.61 --no-cache-dir
+CMAKE_ARGS="-DLLAMA_CUBLAS=on" FORCE_CMAKE=1 pip install --upgrade --force-reinstall llama-cpp-python==0.1.67 --no-cache-dir
 ```
 
 Modify LLM code to accept `n_gpu_layers`:
@@ -429,6 +429,9 @@ You can use the included installer batch file to install the required dependenci
 2. Install [NVidia CUDA 11.8](https://developer.nvidia.com/cuda-11-8-0-download-archive?target_os=Windows&target_arch=x86_64)
 3. Install `llama-cpp-python` package with `cuBLAS` enabled. Run the code below in the directory you want to build the package in.
     - Powershell:
+
+   To install with cuBLAS, set the `LLAMA_CUBLAS=1` environment variable before installing:
+
     ```powershell
     $Env:CMAKE_ARGS="-DLLAMA_CUBLAS=on"; $Env:FORCE_CMAKE=1; pip3 install llama-cpp-python --force-reinstall --upgrade --no-cache-dir
     ```
@@ -456,7 +459,7 @@ If the above doesn't work for you, you will have to manually build llama-cpp-pyt
     ```shell
     cmake -G "Visual Studio 16 2019" -A x64 -D CUDAToolkit_ROOT="C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.8" ..
     ```
-6. Position CLI to this project and install llama from the folder you build, let's say `pip3 install ../llama-cpp-python/`
+6. Position CLI to this project and install llama from the folder you build, let's say `pip3 install ..\llama-cpp-python\`
 
 # Docker
 
@@ -476,10 +479,6 @@ would still work. No data gets out of your local environment.
 
 ```
 docker-compose up -d scrapalot-chat-api
-```
-
-```
-docker-compose up -d scrapalot-chat-web
 ```
 
 # System Requirements
@@ -523,11 +522,3 @@ If so, set your `archflags` during pip install. Eg: `_ARCHFLAGS="-arch x86_64" p
 This is a test project to validate the feasibility of a fully private solution for question answering using LLMs and Vector embeddings.
 It is not production ready, and it is not meant to be used in production. The model selection is not optimized for performance,
 but for privacy; but it is possible to use different models and vector stores to improve performance or just run it on `GPU`.
-
-## Contributors
-
-<table>
-  <tr style="border: 0">
-    <td style="border: 0 !important; text-align: center;"><a href="https://github.com/corran123"><img src="https://github.com/corran123.png" width="50px;" alt=""/><br /><sub><b>corran123</b></sub></a><br /></td>
-  </tr>
-</table>
