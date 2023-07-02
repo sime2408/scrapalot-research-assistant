@@ -255,13 +255,13 @@ async def query_files(body: QueryBody, llm=Depends(get_llm)):
         qa = await process_database_question(database_name, llm, collection_name)
         answer, docs = process_query(qa, question, model_n_answer_words, chat_history, chromadb_get_only_relevant_docs=False, translate_answer=False)
 
-        if translate_a:
+        if translate_a or locale != 'en' and translate_src == 'en':
             answer = GoogleTranslator(source=translate_src, target=locale).translate(answer)
 
         source_documents = []
         for doc in docs:
             document_page = doc.page_content.replace('\n', ' ')
-            if translate_docs == translate_chunks:
+            if translate_chunks:
                 document_page = GoogleTranslator(source=translate_src, target=locale).translate(document_page)
 
             source_documents.append({
