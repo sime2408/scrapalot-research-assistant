@@ -293,12 +293,12 @@ async def upload_files(request: Request):
 ###############################################################################
 @app.get("/")
 def home():
-    return FileResponse('scrapalot-chat-ui/index.html')
+    return FileResponse('scrapalot-research-assistant-ui/index.html')
 
 
 @app.get("/{catch_all:path}")
 def read_root(catch_all: str):
-    return FileResponse('scrapalot-chat-ui/index.html')
+    return FileResponse('scrapalot-research-assistant-ui/index.html')
 
 
 # commented out, because we use web UI
