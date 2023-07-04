@@ -77,7 +77,7 @@ ingest_persist_directory = os.environ.get('INGEST_PERSIST_DIRECTORY', 'db')
 
 # Basic variables for ingestion
 ingest_source_directory = os.environ.get('INGEST_SOURCE_DIRECTORY', 'source_documents')
-ingest_embeddings_model = os.environ.get('INGEST_EMBEDDINGS_MODEL', 'all-MiniLM-L6-v2')
+ingest_embeddings_model = os.environ.get('INGEST_EMBEDDINGS_MODEL', 'intfloat/e5-large-v2')
 ingest_chunk_size = int(os.environ.get("INGEST_CHUNK_SIZE", "1000"))
 ingest_chunk_overlap = int(os.environ.get("INGEST_OVERLAP", "100"))
 ingest_target_source_chunks = int(os.environ.get('INGEST_TARGET_SOURCE_CHUNKS', '6'))

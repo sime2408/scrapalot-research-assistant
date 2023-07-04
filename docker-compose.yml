@@ -31,7 +31,7 @@ services:
     environment:
       - OS_RUNNING_ENVIRONMENT=linux
       - INGEST_PERSIST_DIRECTORY=db
-      - INGEST_EMBEDDINGS_MODEL=all-MiniLM-L6-v2
+      - INGEST_EMBEDDINGS_MODEL=intfloat/e5-large-v2
       - MODEL_TYPE=llamacpp
       - MODEL_ID_OR_PATH=/home/scrapalot/scrapalot-chat/models/WizardLM-7B-uncensored.ggmlv3.q8_0.bin
       - MODEL_N_CTX=1000
@@ -66,7 +66,7 @@ services:
     environment:
       - OS_RUNNING_ENVIRONMENT=linux
       - INGEST_PERSIST_DIRECTORY=db
-      - INGEST_EMBEDDINGS_MODEL=all-MiniLM-L6-v2
+      - INGEST_EMBEDDINGS_MODEL=intfloat/e5-large-v2
       - MODEL_TYPE=llamacpp
       - MODEL_ID_OR_PATH=/home/scrapalot/scrapalot-chat/models/WizardLM-7B-uncensored.ggmlv3.q8_0.bin
       - MODEL_N_CTX=1000

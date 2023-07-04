@@ -79,28 +79,7 @@ it will require internet connection to download the embeddings model itself.
 For each set of documents, create a new sub-folders (1 level) in the `source_documents` folder and place the files inside sub-folders.
 The supported extensions are:
 
-- `.csv`: CSV,
-- `.docx`: Word Document,
-- `.doc`: Word Document,
-- `.enex`: EverNote,
-- `.eml`: Email,
-- `.epub`: EPub,
-- `.html`: HTML File,
-- `.md`: Markdown,
-- `.msg`: Outlook Message,
-- `.odt`: Open Document Text,
-- `.pdf`: Portable Document Format (PDF),
-- `.pptx` : PowerPoint Document,
-- `.ppt` : PowerPoint Document,
-- `.txt`: Text file (UTF-8),
-- `.json`: Text file (jq_schema),
-
-The Application also supports parsing code, for these file types:
-
-- `.py`: Python files,
-- `.java`: Java files,
-- `.js`: Java Script files,
-- `.html`: HTML files,
+- `.pdf`: Portable Document Format (PDF)
 
 #### Conda environment (recommended)
 
@@ -241,16 +220,6 @@ which database you want to ask questions to. After which you should receive an a
 
 You can enter "n" to see new chunk of the document, "s" to speak the text, or "b" to go back in the folder
 structure.
-
-## Document browser
-
-You have and option to browse through the documents and read them per chunk by using:
-
-```shell
-python scrapalot_browse.py
-```
-
-You can also filter some documents by name, read chunks of books text, step forward pressing `"n" + Enter`, speak text pressing `"s" + Enter`.
 
 ## REST API
 

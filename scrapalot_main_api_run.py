@@ -1,4 +1,3 @@
-import asyncio
 import os
 import subprocess
 import sys
@@ -8,12 +7,8 @@ from pathlib import Path
 from typing import List, Optional, Union
 from urllib.parse import unquote
 
-import ebooklib
-import mammoth
-from bs4 import BeautifulSoup
 from deep_translator import GoogleTranslator
 from dotenv import load_dotenv, set_key
-from ebooklib import epub
 from fastapi import FastAPI, Depends, HTTPException, Query, Request
 from langchain.callbacks import StreamingStdOutCallbackHandler
 from pydantic import BaseModel
@@ -22,7 +17,7 @@ from starlette.responses import FileResponse, HTMLResponse
 from starlette.staticfiles import StaticFiles
 
 from scrapalot_main import get_llm_instance
-from scripts.app_environment import translate_docs, translate_src, translate_q, chromaDB_manager, translate_a, model_n_answer_words, api_host, api_port, api_scheme
+from scripts.app_environment import translate_src, translate_q, chromaDB_manager, translate_a, model_n_answer_words, api_host, api_port, api_scheme
 from scripts.app_qa_builder import process_database_question, process_query
 
 sys.path.append(str(Path(sys.argv[0]).resolve().parent.parent))
@@ -129,37 +124,8 @@ def run_ingest(database_name: str, collection_name: Optional[str] = None):
                         "--ingest-dbname", database_name, "--collection", collection_name], check=True)
 
 
-async def docx_to_html(docx_path):
-    loop = asyncio.get_running_loop()
-    with open(docx_path, "rb") as docx_file:
-        result = await loop.run_in_executor(executor, mammoth.convert_to_html, docx_file)
-        html = result.value  # The generated HTML
-    return html
-
-
-async def epub_to_html(epub_path):
-    book = epub.read_epub(epub_path)
-    html = "<html><body>"
-    for item in book.get_items_of_type(ebooklib.ITEM_DOCUMENT):
-        soup = BeautifulSoup(item.get_content().decode("utf-8"), 'html.parser')
-        for tag in soup.find_all(['img', 'image', 'svg']):
-            tag.decompose()
-        html += str(soup)
-    html += "</body></html>"
-    return html
-
-
-async def get_database_file_response(absolute_file_path: str) -> Union[HTMLResponse, FileResponse]:
-    file_extension = os.path.splitext(absolute_file_path)[-1].lower()
-
-    if file_extension == ".docx":
-        html = await docx_to_html(absolute_file_path)
-        return HTMLResponse(content=html, status_code=200)
-    # elif file_extension == ".epub":
-    #     html = await epub_to_html(absolute_file_path)
-    #     return HTMLResponse(content=html, status_code=200)
-    else:
-        return FileResponse(absolute_file_path)
+async def get_database_file_response(absolute_file_path: str) -> Union[FileResponse]:
+    return FileResponse(absolute_file_path)
 
 
 ###############################################################################
@@ -260,14 +226,19 @@ async def query_files(body: QueryBody, llm=Depends(get_llm)):
 
         source_documents = []
         for doc in docs:
-            document_page = doc.page_content.replace('\n', ' ')
             if translate_chunks:
-                document_page = GoogleTranslator(source=translate_src, target=locale).translate(document_page)
+                doc.page_content = GoogleTranslator(source=translate_src, target=locale).translate(doc.page_content)
 
-            source_documents.append({
-                'content': document_page,
-                'link': doc.metadata['source']
-            })
+            document_data = {
+                'content': doc.page_content,
+                'link': doc.metadata['source'],
+            }
+            if 'page' in doc.metadata:
+                document_data['page'] = doc.metadata['page']
+            if 'total_pages' in doc.metadata:
+                document_data['total_pages'] = doc.metadata['total_pages']
+
+            source_documents.append(document_data)
 
         response = {
             'answer': answer,

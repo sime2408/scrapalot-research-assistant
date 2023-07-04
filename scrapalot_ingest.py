@@ -61,8 +61,7 @@ def get_language(file_extension: str) -> Language:
     ext_to_lang = {
         ".java": Language.JAVA,
         ".js": Language.JS,
-        ".py": Language.PYTHON,
-        ".html": Language.HTML,
+        ".py": Language.PYTHON
     }
 
     return ext_to_lang.get(file_extension)

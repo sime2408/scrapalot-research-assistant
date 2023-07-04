@@ -62,24 +62,7 @@ class MyElmLoader(UnstructuredEmailLoader):
 
 # Map file extensions to document loaders and their arguments
 LOADER_MAPPING = {
-    ".csv": (CSVLoader, {}),
-    ".doc": (UnstructuredWordDocumentLoader, {}),
-    ".docx": (UnstructuredWordDocumentLoader, {}),
-    ".enex": (EverNoteLoader, {}),
-    ".eml": (MyElmLoader, {}),
-    ".epub": (UnstructuredEPubLoader, {}),
-    ".html": (UnstructuredHTMLLoader, {}),
-    ".md": (UnstructuredMarkdownLoader, {}),
-    ".odt": (UnstructuredODTLoader, {}),
     ".pdf": (PyMuPDFLoader, {}),
-    ".ppt": (UnstructuredPowerPointLoader, {}),
-    ".pptx": (UnstructuredPowerPointLoader, {}),
-    ".txt": (TextLoader, {"encoding": "utf8", "autodetect_encoding": True}),
-    ".json": (JSONLoader, {"jq_schema": ".[].full_text"}),
-    ".py": (TextLoader, {}),
-    ".java": (TextLoader, {}),
-    ".js": (TextLoader, {}),
-    ".html": (TextLoader, {}),
     # Add more mappings for other file extensions and loaders as needed
 }
 

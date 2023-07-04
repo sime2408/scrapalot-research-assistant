@@ -1,25 +1,18 @@
 #!/usr/bin/env python3
-import asyncio
 import logging
 import os
-from time import monotonic
 
 import torch
 from auto_gptq import AutoGPTQForCausalLM
 from dotenv import load_dotenv
 from langchain import HuggingFacePipeline
 from langchain.callbacks.base import BaseCallbackHandler
-from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.llms import LlamaCpp, GPT4All, OpenAI
-from langchain.schema import Document
 from torch import cuda as torch_cuda
 from transformers import AutoTokenizer, AutoModelForCausalLM, LlamaTokenizer, LlamaForCausalLM, GenerationConfig, pipeline
 
-from scripts import app_logs
 from scripts.app_environment import model_type, openai_api_key, model_n_ctx, model_temperature, model_top_p, model_n_batch, model_use_mlock, model_verbose, \
-    args, db_get_only_relevant_docs, gpt4all_backend, model_path_or_id, gpu_is_enabled, cpu_model_n_threads, gpu_model_n_threads, model_n_answer_words, huggingface_model_base_name
-from scripts.app_qa_builder import print_document_chunk, print_hyperlink, process_database_question, process_query
-from scripts.app_user_prompt import prompt
+    args, gpt4all_backend, model_path_or_id, gpu_is_enabled, cpu_model_n_threads, gpu_model_n_threads, huggingface_model_base_name
 
 # Ensure TOKENIZERS_PARALLELISM is set before importing any HuggingFace module.
 os.environ["TOKENIZERS_PARALLELISM"] = "true"
@@ -140,72 +133,3 @@ def get_llm_instance(*callback_handler: BaseCallbackHandler):
     else:
         logging.error(f"Model {model_type} not supported!")
         raise Exception(f"Model type {model_type} is not supported. Please choose one of the following: LlamaCpp, GPT4All")
-
-
-async def main():
-    llm = get_llm_instance(StreamingStdOutCallbackHandler())
-
-    if llm is None:
-        logging.error("Could not initialize LLM instance.")
-        return
-
-    logging.info(f"Running on: {'cuda' if gpu_is_enabled else 'cpu'}")
-    selected_directory_list = prompt()
-
-    # Initialize a chat history list
-    chat_history = []
-
-    while True:
-        try:
-            query = input("\nEnter question (q for quit): ")
-            if query.strip() == "":
-                continue
-            if query == "q":
-                break
-        except KeyboardInterrupt:
-            print("\nProgram Terminated. Exiting...")
-            break
-
-        qa_list = []
-        for dir_name in selected_directory_list:
-            # Check if the directory name contains a slash, indicating a sub-collection
-            if "/" in dir_name:
-                # If so, split the string to separate the database name and the collection name
-                database_name, collection_name = dir_name.split("/")
-            else:
-                # If not, the database name and the collection name are the same
-                database_name, collection_name = dir_name, dir_name
-
-            processed_answer = await process_database_question(database_name=database_name, llm=llm, collection_name=collection_name)
-            qa_list.append(processed_answer)
-
-        # Doesn't work very well for some reason won't send proper collection name to process_database_question?
-        # def worker(j):
-        #     return process_database_question(selected_directory_list[j], llm, selected_directory_list[j])
-        #
-        # with ThreadPoolExecutor() as executor:
-        #     qa_list = list(executor.map(worker, range(len(selected_directory_list))))
-
-        for i in range(len(qa_list)):
-            start_time = monotonic()
-            qa = qa_list[i]
-
-            print(f"\n\033[94mSeeking for answer from: [{selected_directory_list[i]}]. May take some minutes...\033[0m")
-            answer, docs = process_query(qa, query, model_n_answer_words, chat_history, db_get_only_relevant_docs, translate_answer=True)
-            print(f"\033[94mTook {round(((monotonic() - start_time) / 60), 2)} min to process the answer!\n\033[0m")
-
-            if isinstance(docs, Document):
-                doc = docs
-                print_hyperlink(doc)
-                print_document_chunk(doc)
-            else:
-                for doc in docs:
-                    print_hyperlink(doc)
-                    print_document_chunk(doc)
-
-
-if __name__ == "__main__":
-    app_logs.initialize_logging()
-
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(main())
