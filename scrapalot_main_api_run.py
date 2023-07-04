@@ -37,7 +37,7 @@ app.add_middleware(
     allow_headers=["*"],  # Allows all headers
 )
 
-app.mount("/static", StaticFiles(directory="scrapalot-chat-ui/static"), name="static")
+app.mount("/static", StaticFiles(directory="scrapalot-research-assistant-ui/static"), name="static")
 
 load_dotenv()
 
