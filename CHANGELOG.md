@@ -68,3 +68,15 @@
     - fixed bug with CLI showing collections properly as well
     - scrapalot-chat-web deleted from docker-compose.yml
     - added new UI built in ReactJS, which now has a document browser, and many more features
+
+- **08.07.2023**
+  - prepared project for scrapalot-research-assistant
+  - for parsed file types, we only support PDF files now
+  - removed streamlit support
+  - removed CLI application and CLI browser through local documents, now all go over ReactJS UI
+  - removed IntelliJ run commands since they differ from os to os
+  - introduced new Huggingface embedding model `intfloat/e5-large-v2` which now allows more metadata to be extracted from the documents
+  - updated readme and changelog
+  - upgraded: langchain, llama-cpp-python, gpt4all, PyMuPDF, unstructured, deep-translator, transformers, fastapi,
+  - added `scrapalot_file_converter.py` if you need to convert your previously used epub books to pdf
+  - the new UI now supports scratchpad for taking notes
