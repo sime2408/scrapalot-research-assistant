@@ -1,6 +1,7 @@
 import logging
 import math
 import os
+import io
 import platform
 import sys
 import textwrap
@@ -21,6 +22,9 @@ from langchain.document_loaders import (
     UnstructuredEmailLoader,
 )
 from langchain.schema import Document
+
+from ingestion_storage.app_storage import AbstractStorage
+from ingestion_storage.app_storage_google_drive import GoogleDriveStorage
 
 
 def print_platform_version():
@@ -67,18 +71,27 @@ LOADER_MAPPING = {
 }
 
 
-def load_single_document(file_path: str) -> List[Document]:
+def load_single_document(storage: AbstractStorage, file_path: str) -> List[Document]:
     """
     The function takes a single file and loads its data using the appropriate loader based on its extension.
+    :param storage: The storage instance (local or Google Drive)
     :param file_path: The path of the file to load.
     :return: A list of Document objects loaded from the file.
     """
     ext = (os.path.splitext(file_path)[-1]).lower()
     if ext in LOADER_MAPPING:
         try:
-            loader_class, loader_args = LOADER_MAPPING[ext]
-            loader = loader_class(file_path, **loader_args)
-            return loader.load()
+            # If the storage is Google Drive, download the file first
+            if isinstance(storage, GoogleDriveStorage):
+                file_content = storage.download_file(file_path)
+                file_like_object = io.StringIO(file_content)
+            else:  # For local storage, just open the file
+                file_like_object = open(file_path, 'r')
+
+            with file_like_object:
+                loader_class, loader_args = LOADER_MAPPING[ext]
+                loader = loader_class(file_like_object, **loader_args)
+                return loader.load()
         except Exception as e:
             raise ValueError(f"Problem with document {file_path}: \n'{e}'")
     raise ValueError(f"Unsupported file extension '{ext}'")
@@ -103,7 +116,7 @@ def display_directories():
     It also explores one level of subdirectories for each directory.
     :return: The list of existing directories.
     """
-    base_dir = "./source_documents"
+    base_dir = os.path.join(".", "source_documents")
     directories = []
 
     # Fetch directories and their direct subdirectories
