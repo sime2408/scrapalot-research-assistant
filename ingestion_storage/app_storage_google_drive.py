@@ -1,5 +1,5 @@
 import os
-from typing import List
+from typing import List, Optional
 
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
@@ -13,6 +13,18 @@ class GoogleDriveStorage(AbstractStorage):
         self.gauth = GoogleAuth()
         self.gauth.LocalWebserverAuth()  # Creates local webserver and auto handles authentication
         self.drive = GoogleDrive(self.gauth)
+
+    def get_folder_id(self, path: str) -> Optional[str]:
+        path_parts = path.split(os.sep)
+        parent_id = 'root'
+        for part in path_parts:
+            query = f"title='{part}' and '{parent_id}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false"
+            results = self.drive.ListFile({'q': query}).GetList()
+            if len(results) == 1:
+                parent_id = results[0]['id']
+            else:
+                return None  # Folder not found
+        return parent_id
 
     def create_directory(self, directory: str) -> None:
         # Google Drive doesn't have a concept of directories in the way local file systems do.
@@ -84,13 +96,18 @@ class GoogleDriveStorage(AbstractStorage):
         return [file['title'] for file in file_list]
 
     def download_file(self, file_path: str) -> bytes:
-        file_list = self.drive.ListFile({'q': f"title='{file_path}'"}).GetList()
-        if len(file_list) == 1:
-            file_list[0].GetContentFile(file_path)
-            with open(file_path, 'rb') as f:
-                return f.read()
+        dir_path, file_name = os.path.split(file_path)
+        parent_id = self.get_folder_id(dir_path)
+        if parent_id is not None:
+            query = f"'{parent_id}' in parents and title='{file_name}' and trashed=false"
+            file_list = self.drive.ListFile({'q': query}).GetList()
+            if len(file_list) == 1:
+                file_content = file_list[0].GetContentString()
+                return file_content
+            else:
+                raise FileNotFoundError(f"File {file_path} not found")
         else:
-            raise FileNotFoundError(f"File {file_path} not found")
+            raise FileNotFoundError(f"Directory {dir_path} not found")
 
     def upload_file(self, file_path: str, data: bytes) -> None:
         file = self.drive.CreateFile({'title': os.path.basename(file_path)})
