@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
+import concurrent
 import os
 import sys
 from collections import defaultdict
+from concurrent.futures.thread import ThreadPoolExecutor
 from functools import partial
-from multiprocessing import Pool
 from time import monotonic
 from typing import List, Optional, Dict
 
@@ -43,18 +44,20 @@ def load_documents(storage: AbstractStorage, source_dir: str, collection_name: O
     all_files = storage.list_files_src(collection_dir)
     filtered_files = [file_path for file_path in all_files if storage.is_file(file_path) and file_path not in ignored_files]
 
-    with Pool(processes=min(8, os.cpu_count())) as pool:
+    with ThreadPoolExecutor(max_workers=min(8, os.cpu_count())) as executor:
         load_with_storage = partial(load_single_document, storage)
         results = []
-        with tqdm(total=len(filtered_files), desc='Loading new documents', ncols=80) as pbar:
-            for i, docs in enumerate(pool.imap_unordered(load_with_storage, filtered_files)):
-                if isinstance(docs, dict):
-                    print(" - " + docs['file'] + ": error: " + str(docs['exception']))
-                    continue
+        future_to_file = {executor.submit(load_with_storage, file_path): file_path for file_path in filtered_files}
+        for future in tqdm(concurrent.futures.as_completed(future_to_file), total=len(filtered_files), desc='Loading new documents', ncols=80):
+            file_path = future_to_file[future]
+            try:
+                docs = future.result()
+            except Exception as exc:
+                print(f"\n - {file_path}: \n error: {repr(exc)}")
+                continue
 
-                print(f"\n\033[32m\033[2m\033[38;2;0;128;0m{docs[0].metadata.get('source', '')} \033[0m")
-                results.extend(docs)
-                pbar.update()
+            print(f"\n\033[32m\033[2m\033[38;2;0;128;0m{docs[0].metadata.get('source', '')} \033[0m")
+            results.extend(docs)
 
     return results
 

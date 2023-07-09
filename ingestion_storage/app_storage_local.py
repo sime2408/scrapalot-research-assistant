@@ -11,6 +11,9 @@ class LocalStorage(AbstractStorage):
         # Code to configure local storage
         pass
 
+    def get_type(self) -> str:
+        return "local_storage"
+
     def create_directory(self, directory: str) -> None:
         os.makedirs(directory, exist_ok=True)
 
@@ -27,9 +30,8 @@ class LocalStorage(AbstractStorage):
         list_index_files += glob.glob(os.path.join(persist_directory, 'index/*.pkl'))
         return list_index_files
 
-    def download_file(self, file_path: str) -> bytes:
-        # Code to download a file from Local Storage
-        pass
+    def get_file_path(self, file_path: str) -> str:
+        return file_path
 
     def upload_file(self, file_path: str, data: bytes) -> None:
         # Code to upload a file to Local Storage

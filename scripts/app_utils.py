@@ -1,4 +1,3 @@
-import io
 import logging
 import math
 import os
@@ -48,17 +47,17 @@ def load_single_document(storage: AbstractStorage, file_path: str) -> List[Docum
     ext = (os.path.splitext(file_path)[-1]).lower()
     if ext in LOADER_MAPPING:
         try:
+            loader_class, loader_args = LOADER_MAPPING[ext]
             # If the storage is Google Drive, download the file first
             if isinstance(storage, GoogleDriveStorage):
-                file_content = storage.download_file(file_path)
-                file_like_object = io.StringIO(file_content)
+                file_path_remote = storage.get_file_path(file_path)
+                loader = loader_class(file_path_remote, **loader_args)
+                file = loader.load()
+                os.remove(file_path_remote)
+                return file
             else:  # For local storage, just open the file
-                file_like_object = open(file_path, 'r')
-
-            with file_like_object:
-                loader_class, loader_args = LOADER_MAPPING[ext]
-                loader = loader_class(file_like_object, **loader_args)
-                return loader.load()
+                loader = loader_class(file_path, **loader_args)
+            return loader.load()
         except Exception as e:
             raise ValueError(f"Problem with document {file_path}: \n'{e}'")
     raise ValueError(f"Unsupported file extension '{ext}'")

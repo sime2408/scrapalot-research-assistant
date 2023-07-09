@@ -2,8 +2,8 @@ import os
 import tempfile
 from typing import List, Optional
 
-from pydrive.auth import GoogleAuth
-from pydrive.drive import GoogleDrive
+from pydrive2.auth import GoogleAuth
+from pydrive2.drive import GoogleDrive
 
 from ingestion_storage.app_storage import AbstractStorage
 
@@ -11,9 +11,26 @@ from ingestion_storage.app_storage import AbstractStorage
 class GoogleDriveStorage(AbstractStorage):
 
     def __init__(self):
-        self.gauth = GoogleAuth()
-        self.gauth.LocalWebserverAuth()  # Creates local webserver and auto handles authentication
-        self.drive = GoogleDrive(self.gauth)
+        # Don't create the GoogleAuth and GoogleDrive instances here because gauth can't be pickled (serialized)
+        self._gauth = None
+        self._drive = None
+        pass
+
+    @property
+    def gauth(self):
+        if self._gauth is None:
+            self._gauth = GoogleAuth()
+            self._gauth.LocalWebserverAuth()  # Creates local webserver and auto handles authentication
+        return self._gauth
+
+    @property
+    def drive(self):
+        if self._drive is None:
+            self._drive = GoogleDrive(self.gauth)
+        return self._drive
+
+    def get_type(self) -> str:
+        return "google_drive_storage"
 
     def get_folder_id(self, path: str) -> Optional[str]:
         path_parts = path.split(os.sep)
@@ -76,26 +93,17 @@ class GoogleDriveStorage(AbstractStorage):
     def list_files_db(self, persist_directory: str) -> List[str]:
         return self.list_files_src(persist_directory)
 
-    def download_file(self, file_path: str) -> bytes:
+    def get_file_path(self, file_path: str) -> str:
         dir_path, file_name = os.path.split(file_path)
         parent_id = self.get_folder_id(dir_path)
         if parent_id is not None:
             query = f"'{parent_id}' in parents and title='{file_name}' and trashed=false"
             file_list = self.drive.ListFile({'q': query}).GetList()
             if len(file_list) == 1:
-                # Create a temporary file
-                temp_fd, temp_path = tempfile.mkstemp()
-                os.close(temp_fd)  # Close the file descriptor, we just need the path
-                try:
-                    # Download the Google Drive file to the temporary file
-                    file_list[0].GetContentFile(temp_path)
-                    # Read the content of the temporary file
-                    with open(temp_path, 'rb') as temp_file:
-                        file_content = temp_file.read()
-                finally:
-                    # Remove the temporary file
-                    os.remove(temp_path)
-                return file_content
+                google_drive_file = self.drive.CreateFile({'id': file_list[0]['id']})
+                temp_file_path = tempfile.mktemp(suffix=".pdf")  # Create a temp file path
+                google_drive_file.GetContentFile(temp_file_path)  # Download the file to the temp file
+                return temp_file_path
             else:
                 raise FileNotFoundError(f"File {file_path} not found")
         else:

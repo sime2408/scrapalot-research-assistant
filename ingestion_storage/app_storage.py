@@ -5,6 +5,11 @@ from typing import List
 class AbstractStorage(ABC):
 
     @abstractmethod
+    def get_type(self) -> str:
+        """Get the type of this storage"""
+        pass
+
+    @abstractmethod
     def create_directory(self, directory: str) -> None:
         """Create a directory."""
         pass
@@ -20,7 +25,7 @@ class AbstractStorage(ABC):
         pass
 
     @abstractmethod
-    def download_file(self, file_path: str) -> bytes:
+    def get_file_path(self, file_path: str) -> str:
         """Download a file and return its contents."""
         pass
 
