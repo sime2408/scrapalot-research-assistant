@@ -15,6 +15,11 @@ class AbstractStorage(ABC):
         pass
 
     @abstractmethod
+    def list_dirs_src(self, parent_dir: str) -> List[str]:
+        """List all subdirectories in the given directory."""
+        pass
+
+    @abstractmethod
     def list_files_src(self, directory: str) -> List[str]:
         """List all files in the given directory."""
         pass
@@ -42,6 +47,10 @@ class AbstractStorage(ABC):
     @abstractmethod
     def path_exists(self, path: str) -> bool:
         """Check if path exists."""
+        pass
+
+    def is_directory(self, directory: str) -> bool:
+        """Check if a directory exists."""
         pass
 
     @abstractmethod

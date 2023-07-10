@@ -206,7 +206,7 @@ def prompt_user(chosen_storage: AbstractStorage):
         user_choice = input('\nEnter your choice ("q" for quit): ').strip()
 
         if user_choice == "1":
-            directories = display_directories()
+            directories = display_directories(chosen_storage)
             while True:  # Keep asking until we get a valid directory number
                 existing_directory = input("\n\033[94mEnter the number of the existing directory (q for quit, b for back): \033[0m")
                 if existing_directory == 'q':
@@ -220,7 +220,7 @@ def prompt_user(chosen_storage: AbstractStorage):
 
                     if not chosen_storage.list_files_src(selected_directory_path):
                         print(f"\033[91m\033[1m[!]\033[0m Selected directory: '{selected_directory}' is empty \033[91m\033[1m[!]\033[0m")
-                        directories = display_directories()  # Display directories again if the selected one is empty
+                        directories = display_directories(chosen_storage)  # Display directories again if the selected one is empty
                     else:
                         if not chosen_storage.path_exists(selected_db_path):
                             chosen_storage.create_directory(selected_db_path)
@@ -230,7 +230,7 @@ def prompt_user(chosen_storage: AbstractStorage):
                         return selected_directory_path, selected_db_path
                 except (ValueError, IndexError):
                     print("\n\033[91m\033[1m[!] \033[0mInvalid choice. Please try again.\033[91m\033[1m[!] \033[0m\n")
-                    directories = display_directories()  # Display directories again if the input is invalid
+                    directories = display_directories(chosen_storage)  # Display directories again if the input is invalid
         elif user_choice == "2":
             new_directory_name = input("Enter the name for the new directory: ")
             selected_directory_path, selected_db_path = _create_directory(new_directory_name)

@@ -17,6 +17,9 @@ class LocalStorage(AbstractStorage):
     def create_directory(self, directory: str) -> None:
         os.makedirs(directory, exist_ok=True)
 
+    def list_dirs_src(self, parent_dir: str) -> List[str]:
+        return os.listdir(parent_dir)
+
     def list_files_src(self, directory: str) -> List[str]:
         all_files = []
         for ext in LOADER_MAPPING:
@@ -43,6 +46,9 @@ class LocalStorage(AbstractStorage):
 
     def path_exists(self, path: str) -> bool:
         return os.path.exists(path)
+
+    def is_directory(self, directory: str) -> bool:
+        return os.path.isdir(directory)
 
     def is_file(self, file_path: str) -> bool:
         return os.path.isfile(file_path)

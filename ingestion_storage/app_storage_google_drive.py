@@ -36,6 +36,9 @@ class GoogleDriveStorage(AbstractStorage):
         path_parts = path.split(os.sep)
         parent_id = 'root'
         for part in path_parts:
+            # Skip over any "." in the path
+            if part == ".":
+                continue
             query = f"title='{part}' and '{parent_id}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false"
             results = self.drive.ListFile({'q': query}).GetList()
             if len(results) == 1:
@@ -61,7 +64,7 @@ class GoogleDriveStorage(AbstractStorage):
         else:
             raise FileNotFoundError(f"Directory {dir_path} not found")
 
-    def list_files_src(self, directory: str) -> List[str]:
+    def directory_root(self, directory: str) -> str:
         # Normalize path (replace '\' with '/')
         directory = os.path.normpath(directory)
 
@@ -70,7 +73,6 @@ class GoogleDriveStorage(AbstractStorage):
 
         # Start from the root of the drive
         current_parent_id = 'root'
-
         # For each component in the directory path
         for component in directory_components:
             # Search for a folder with the current title and parent ID
@@ -83,6 +85,21 @@ class GoogleDriveStorage(AbstractStorage):
 
             # Otherwise, update the current parent ID and continue with the next component
             current_parent_id = results[0]['id']
+
+        return current_parent_id
+
+    def list_dirs_src(self, directory: str) -> List[str]:
+
+        current_parent_id = self.directory_root(directory)
+
+        # Once the parent directory is found, list all subdirectories in it
+        query = f"'{current_parent_id}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false"
+        dir_list = self.drive.ListFile({'q': query}).GetList()
+
+        return [src_directory['title'] for src_directory in dir_list]
+
+    def list_files_src(self, directory: str) -> List[str]:
+        current_parent_id = self.directory_root(directory)
 
         # Once the parent directory is found, list all files in it
         query = f"'{current_parent_id}' in parents and trashed=false"
@@ -161,6 +178,11 @@ class GoogleDriveStorage(AbstractStorage):
 
         # If we found a file or folder for every component, the path exists
         return True
+
+    def is_directory(self, directory: str) -> bool:
+        # If method get_folder_id returns None, the path does not exist or is not a directory
+        # Otherwise, the path is a directory
+        return self.get_folder_id(directory) is not None
 
     def is_file(self, file_path: str) -> bool:
         return self.path_exists(file_path)

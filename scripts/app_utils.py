@@ -76,7 +76,7 @@ def display_source_directories(folder: str) -> list[str]:
     return sorted((f for f in os.listdir(f"./{folder}") if not f.startswith(".")), key=str.lower)
 
 
-def display_directories():
+def display_directories(chosen_storage: AbstractStorage):
     """
     This function displays the list of existing directories in the parent directory.
     It also explores one level of subdirectories for each directory.
@@ -86,14 +86,14 @@ def display_directories():
     directories = []
 
     # Fetch directories and their direct subdirectories
-    sorted_list = sorted(os.listdir(base_dir))
+    sorted_list = sorted(chosen_storage.list_dirs_src(base_dir))
     for dir_name in sorted_list:
         if not dir_name.startswith("."):
             dir_path = os.path.join(base_dir, dir_name)
 
-            if os.path.isdir(dir_path):
+            if chosen_storage.is_directory(dir_path):
                 directories.append(dir_name)
-                subdirectories = [f"{dir_name}/{sub_dir}" for sub_dir in sorted(os.listdir(dir_path)) if os.path.isdir(os.path.join(dir_path, sub_dir))]
+                subdirectories = [f"{dir_name}/{sub_dir}" for sub_dir in sorted(chosen_storage.list_dirs_src(dir_path)) if chosen_storage.is_directory(os.path.join(dir_path, sub_dir))]
                 directories.extend(subdirectories)
 
     cli_column_number = 4  # Number of columns to be displayed
