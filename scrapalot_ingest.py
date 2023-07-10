@@ -169,7 +169,7 @@ def prompt_storage_type():
     return choose_storage_type
 
 
-def prompt_user():
+def prompt_user(chosen_storage: AbstractStorage):
     """
     Prompts the user to select a storage type and enter any necessary credentials.
     Then prompts the user to select an existing directory or create a new one to store source material.
@@ -179,8 +179,8 @@ def prompt_user():
 
     def _create_directory(directory_name):
         """
-        Creates a new directory with the given directory_name in the ./source_documents directory.
-        It also creates a corresponding directory in the ./db directory for the database files.
+        Creates a new directory with the given directory_name.
+        It also creates a corresponding directory for the database files.
         It sets the directory paths as environment variables and returns them.
         :param directory_name: The name for the new directory.
         :return: The path of the new directory and the path of the database directory.
@@ -188,10 +188,12 @@ def prompt_user():
         directory_path = os.path.join(".", "source_documents", directory_name)
         db_path = os.path.join(".", "db", directory_name)
 
-        os.makedirs(directory_path)
-        os.makedirs(db_path)
+        chosen_storage.create_directory(directory_path)
+        chosen_storage.create_directory(db_path)
+
         set_key('.env', 'INGEST_SOURCE_DIRECTORY', directory_path)
         set_key('.env', 'INGEST_PERSIST_DIRECTORY', db_path)
+
         print(f"Created new directory: {directory_path}")
         return directory_path, db_path
 
@@ -216,12 +218,12 @@ def prompt_user():
                     selected_directory_path = os.path.join(".", "source_documents", selected_directory)
                     selected_db_path = os.path.join(".", "db", selected_directory)
 
-                    if not os.listdir(selected_directory_path):
+                    if not chosen_storage.list_files_src(selected_directory_path):
                         print(f"\033[91m\033[1m[!]\033[0m Selected directory: '{selected_directory}' is empty \033[91m\033[1m[!]\033[0m")
                         directories = display_directories()  # Display directories again if the selected one is empty
                     else:
-                        if not os.path.exists(selected_db_path):
-                            os.makedirs(selected_db_path)
+                        if not chosen_storage.path_exists(selected_db_path):
+                            chosen_storage.create_directory(selected_db_path)
                         set_key('.env', 'INGEST_SOURCE_DIRECTORY', selected_directory_path)
                         set_key('.env', 'INGEST_PERSIST_DIRECTORY', selected_db_path)
                         print(f"Selected directory: {selected_directory_path}")
@@ -340,7 +342,7 @@ if __name__ == "__main__":
         else:
             storage_type = prompt_storage_type()
             storage = get_ingestion_storage(storage_type)
-            source_directory, persist_directory = prompt_user()
+            source_directory, persist_directory = prompt_user(storage)
             db_name = os.path.basename(persist_directory)
             main(storage, source_directory, persist_directory, db_name)
     except SystemExit:
