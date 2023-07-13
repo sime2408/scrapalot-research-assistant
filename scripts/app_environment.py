@@ -77,7 +77,7 @@ ingest_persist_directory = os.environ.get('INGEST_PERSIST_DIRECTORY', 'db')
 
 # Basic variables for ingestion
 ingest_source_directory = os.environ.get('INGEST_SOURCE_DIRECTORY', 'source_documents')
-ingest_embeddings_model = os.environ.get('INGEST_EMBEDDINGS_MODEL', 'intfloat/e5-large-v2')
+ingest_embeddings_model = os.environ.get('INGEST_EMBEDDINGS_MODEL', 'hkunlp/instructor-large')
 ingest_chunk_size = int(os.environ.get("INGEST_CHUNK_SIZE", "1000"))
 ingest_chunk_overlap = int(os.environ.get("INGEST_OVERLAP", "100"))
 ingest_target_source_chunks = int(os.environ.get('INGEST_TARGET_SOURCE_CHUNKS', '6'))
@@ -106,10 +106,7 @@ huggingface_model_base_name = os.environ.get("MODEL_HF_BASE_NAME")
 gpt4all_backend = os.environ.get("GPT4ALL_BACKEND", "gptj")
 
 # Setting specific for LLAMA GPU models
-gpu_is_enabled = os.environ.get('GPU_IS_ENABLED', "false") == "true"
-# Force GPU_IS_ENABLED env var, if it's not set, use the result of is_cuda_available()
-if str(is_cuda_available()).lower() == "true":
-    gpu_is_enabled = "true"
+gpu_is_enabled = "true" if is_cuda_available() else "false"
 
 # Setting specific for a database
 db_get_only_relevant_docs = os.environ.get("DB_GET_ONLY_RELEVANT_DOCS", "false") == "true"

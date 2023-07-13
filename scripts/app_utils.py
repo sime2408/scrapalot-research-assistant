@@ -7,18 +7,7 @@ import textwrap
 from typing import List
 
 from langchain.document_loaders import (
-    CSVLoader,
-    EverNoteLoader,
     PyMuPDFLoader,
-    TextLoader,
-    JSONLoader,
-    UnstructuredEPubLoader,
-    UnstructuredHTMLLoader,
-    UnstructuredMarkdownLoader,
-    UnstructuredODTLoader,
-    UnstructuredPowerPointLoader,
-    UnstructuredWordDocumentLoader,
-    UnstructuredEmailLoader,
 )
 from langchain.schema import Document
 
@@ -36,28 +25,6 @@ def print_platform_version():
 ######################################################################
 # INGEST
 ######################################################################
-
-# Custom document loaders
-class MyElmLoader(UnstructuredEmailLoader):
-    """Wrapper to fall back to text/plain when default does not work"""
-
-    def load(self) -> List[Document]:
-        """Wrapper adding fallback for elm without html"""
-        try:
-            try:
-                doc = UnstructuredEmailLoader.load(self)
-            except ValueError as e:
-                if 'text/html content not found in email' in str(e):
-                    # Try plain text
-                    self.unstructured_kwargs["content_source"] = "text/plain"
-                    doc = UnstructuredEmailLoader.load(self)
-                else:
-                    raise
-        except Exception as e:
-            # Add file_path to exception message
-            raise type(e)(f"{self.file_path}: {e}") from e
-
-        return doc
 
 
 # Map file extensions to document loaders and their arguments
@@ -103,7 +70,7 @@ def display_directories():
     It also explores one level of subdirectories for each directory.
     :return: The list of existing directories.
     """
-    base_dir = "./source_documents"
+    base_dir = os.path.join(".", "source_documents")
     directories = []
 
     # Fetch directories and their direct subdirectories

@@ -168,7 +168,7 @@ async def get_database_names_and_collections():
 
 @app.get("/api/database/{database_name}", response_model=List[SourceDirectoryFile])
 async def get_database_files(database_name: str, page: int = Query(1, ge=1), items_per_page: int = Query(10, ge=1)):
-    base_dir = "./source_documents"
+    base_dir = os.path.join(".", "source_documents")
     absolute_base_dir = os.path.abspath(base_dir)
     database_dir = os.path.join(absolute_base_dir, database_name)
     if not os.path.exists(database_dir) or not os.path.isdir(database_dir):
@@ -180,7 +180,7 @@ async def get_database_files(database_name: str, page: int = Query(1, ge=1), ite
 
 @app.get("/api/database/{database_name}/collection/{collection_name}", response_model=List[SourceDirectoryFile])
 async def get_database_collection_files(database_name: str, collection_name: str, page: int = Query(1, ge=1), items_per_page: int = Query(10, ge=1)):
-    base_dir = "./source_documents"
+    base_dir = os.path.join(".", "source_documents")
     absolute_base_dir = os.path.abspath(base_dir)
     collection_dir = os.path.join(absolute_base_dir, database_name, collection_name)
     if not os.path.exists(collection_dir) or not os.path.isdir(collection_dir):
@@ -191,7 +191,7 @@ async def get_database_collection_files(database_name: str, collection_name: str
 
 @app.get("/api/database/{database_name}/file/{file_name}", response_model=None)
 async def get_database_file(database_name: str, file_name: str) -> Union[HTMLResponse, FileResponse]:
-    base_dir = "./source_documents"
+    base_dir = os.path.join(".", "source_documents")
     absolute_base_dir = os.path.abspath(base_dir)
     database_dir = os.path.join(absolute_base_dir, database_name)
     if not os.path.exists(database_dir) or not os.path.isdir(database_dir):
@@ -262,7 +262,7 @@ async def upload_files(request: Request):
         files = [files]
 
     saved_files = []
-    source_documents = './source_documents'
+    source_documents = os.path.join(".", "source_documents")
     try:
         for file in files:
             content = await file.read()  # read file content

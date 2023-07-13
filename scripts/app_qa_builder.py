@@ -7,7 +7,7 @@ from deep_translator import GoogleTranslator
 from langchain import PromptTemplate
 from langchain.chains import ConversationalRetrievalChain
 from langchain.chains.retrieval_qa.base import BaseRetrievalQA
-from langchain.embeddings import OpenAIEmbeddings, HuggingFaceEmbeddings
+from langchain.embeddings import OpenAIEmbeddings, HuggingFaceInstructEmbeddings
 from langchain.vectorstores import Chroma
 from openai.error import AuthenticationError
 
@@ -42,7 +42,7 @@ def print_document_chunk(doc):
 async def process_database_question(database_name, llm, collection_name: Optional[str]):
     embeddings_kwargs = {'device': 'cuda'} if gpu_is_enabled else {'device': 'cpu'}
     encode_kwargs = {'normalize_embeddings': False}
-    embeddings = OpenAIEmbeddings() if openai_use else HuggingFaceEmbeddings(
+    embeddings = OpenAIEmbeddings() if openai_use else HuggingFaceInstructEmbeddings(
         model_name=ingest_embeddings_model, model_kwargs=embeddings_kwargs, encode_kwargs=encode_kwargs
     )
     persist_dir = f"./db/{database_name}"

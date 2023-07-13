@@ -4,6 +4,7 @@ import os
 import sys
 from collections import defaultdict
 from multiprocessing import Pool
+from time import monotonic
 from typing import List, Optional, Dict
 
 from dotenv import set_key
@@ -246,6 +247,8 @@ def main(source_dir: str, persist_dir: str, db_name: str, sub_collection_name: O
     embeddings = create_embeddings()
     collection_name = sub_collection_name or db_name
 
+    start_time = monotonic()
+
     if does_vectorstore_exist(persist_dir):
         print(f"Appending to existing vectorstore at {persist_dir}")
         db = get_chroma(collection_name, embeddings, persist_dir)
@@ -256,10 +259,12 @@ def main(source_dir: str, persist_dir: str, db_name: str, sub_collection_name: O
         create_and_persist_db(embeddings, texts, persist_dir, collection_name)
 
     print("Ingestion complete! You can now run scrapalot_main.py to query your documents")
+    print(f"\033[94mTook {round(((monotonic() - start_time) / 60), 2)} min to process the ingestion!\033[0m")
 
 
 if __name__ == "__main__":
     try:
+
         if args.ingest_dbname:
             db_name = args.ingest_dbname
             source_directory = f"./source_documents/{db_name}"

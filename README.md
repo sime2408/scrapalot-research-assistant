@@ -39,8 +39,6 @@ INGEST_CHUNK_SIZE: default chunk size of texts when performing an ingest
 INGEST_OVERLAP: default chunk overlap of texts when performing an ingest
 INGEST_TARGET_SOURCE_CHUNKS: The amount of chunks (sources) that will be used to answer a question, defaults to 6 (decrese if you have less resources).
 
-GPU_IS_ENABLED: Whether or not your GPU environment is enabled.
-
 MODEL_TYPE: supports llamacpp, gpt4all, openai, huggingface
 MODEL_ID_OR_PATH: Path to your gpt4all or llamacpp supported LLM
 MODEL_N_CTX: Token context window. Maximum token limit for the LLM model
@@ -249,7 +247,7 @@ UI is constantly WIP so some functionallities might be disabled. If you find any
 
 # CPU processor
 
-CPU is slower than GPU, but if your system does not have this support, you will have to set `GPU_IS_ENABLED` variable to `false`.
+CPU is slower than GPU, but will be auto-selected if your system does not have this support.
 GPU acceleration is available on `NVIDIA` graphic cards and can speed up generation of answers by 80% (depends on hardware)
 
 ## CPU (Linux):
@@ -278,7 +276,13 @@ pip3 install -r requirements.txt
 
 # GPU acceleration
 
-Most importantly is that `GPU_IS_ENABLED` variable must be set to `true`.
+It is important that you have proper torch version installed to recognize CUDA:
+
+```shell
+pip uninstall torch torchvision
+conda uninstall pytorch torchvision
+pip install torch==2.0.1+cu118 torchvision==0.15.2+cu118 torchaudio===2.0.2 -f https://download.pytorch.org/whl/torch_stable.html
+```
 
 ## GPU (Linux):
 
@@ -379,12 +383,6 @@ MODEL_ID_OR_PATH=models/ggml-vic13b-q5_1.bin
 
 Set `OS_RUNNING_ENVIRONMENT=windows` inside `.env` file
 
-It is important that you have proper torch version installed to recognize CUDA:
-
-```
-pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
-```
-
 ```shell
 pip3 install -r requirements.txt
 ```
@@ -416,8 +414,7 @@ You can use the included installer batch file to install the required dependenci
     CMAKE_ARGS="-DLLAMA_CUBLAS=on" FORCE_CMAKE=1 pip3 install llama-cpp-python --force-reinstall --upgrade --no-cache-dir
     ```
 
-4. Enable GPU acceleration in `.env` file by setting `GPU_IS_ENABLED` to `true`
-5. Run `scrapalot_ingest.py` and `scrapalot_main.py` as usual
+4. Run `scrapalot_ingest.py` and `scrapalot_main.py` as usual
 
 If the above doesn't work for you, you will have to manually build llama-cpp-python library with CMake:
 
