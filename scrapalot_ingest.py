@@ -9,7 +9,7 @@ from typing import List, Optional, Dict
 
 from dotenv import set_key
 from langchain.docstore.document import Document
-from langchain.embeddings import HuggingFaceEmbeddings
+from langchain.embeddings import HuggingFaceInstructEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter, Language
 from langchain.vectorstores import Chroma
 from tqdm import tqdm
@@ -199,7 +199,7 @@ def prompt_user():
 
 def create_embeddings():
     embeddings_kwargs = {'device': 'cuda'} if gpu_is_enabled else {}
-    return HuggingFaceEmbeddings(
+    return HuggingFaceInstructEmbeddings(
         model_name=ingest_embeddings_model if ingest_embeddings_model else args.ingest_embeddings_model,
         model_kwargs=embeddings_kwargs
     )
