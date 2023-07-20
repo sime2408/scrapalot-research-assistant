@@ -38,15 +38,15 @@ def calculate_layer_count() -> None | int | float:
     rather than determining the number of threads.
     The layer size is specified as a constant (120.6 MB), and the available GPU memory is divided by this to determine the maximum number of layers that can be fit onto the GPU.
     Some additional memory (the size of 6 layers) is reserved for other uses.
-    The maximum layer count is capped at 32.
+    The maximum layer count is capped at 43.
     """
     if not gpu_is_enabled:
         return None
     LAYER_SIZE_MB = 120.6  # This is the size of a single layer on VRAM, and is an approximation.
     # The current set value is for 7B models. For other models, this value should be changed.
     LAYERS_TO_REDUCE = 6  # About 700 MB is needed for the LLM to run, so we reduce the layer count by 6 to be safe.
-    if (get_gpu_memory() // LAYER_SIZE_MB) - LAYERS_TO_REDUCE > 32:
-        return 32
+    if (get_gpu_memory() // LAYER_SIZE_MB) - LAYERS_TO_REDUCE >= 43:
+        return 43
     else:
         return get_gpu_memory() // LAYER_SIZE_MB - LAYERS_TO_REDUCE
 

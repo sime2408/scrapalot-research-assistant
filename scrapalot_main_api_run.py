@@ -67,6 +67,12 @@ class SourceDirectoryFile(BaseModel):
     name: str
 
 
+class TranslationItem(BaseModel):
+    src_lang: str
+    dst_lang: str
+    text: str
+
+
 class LLM:
     def __init__(self):
         self.instance = None
@@ -286,6 +292,11 @@ async def upload_files(request: Request):
             return response
     except Exception as e:
         return HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/translate")
+async def translate(item: TranslationItem):
+    return {"translated_text": GoogleTranslator(source=item.src_lang, target=item.dst_lang).translate(item.text)}
 
 
 ###############################################################################
