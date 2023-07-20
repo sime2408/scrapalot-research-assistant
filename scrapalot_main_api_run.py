@@ -4,11 +4,11 @@ import sys
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Tuple
 from urllib.parse import unquote
 
 from deep_translator import GoogleTranslator
-from dotenv import load_dotenv, set_key
+from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, HTTPException, Query, Request
 from langchain.callbacks import StreamingStdOutCallbackHandler
 from pydantic import BaseModel
@@ -67,6 +67,11 @@ class SourceDirectoryFile(BaseModel):
     name: str
 
 
+class SourceDirectoryFilePaginated(BaseModel):
+    total_count: int
+    items: List[SourceDirectoryFile]
+
+
 class TranslationItem(BaseModel):
     src_lang: str
     dst_lang: str
@@ -109,7 +114,7 @@ def list_of_collections(database_name: str):
     return client.list_collections()
 
 
-async def get_files_from_dir(database: str, page: int, items_per_page: int) -> List[SourceDirectoryFile]:
+async def get_files_from_dir(database: str, page: int, items_per_page: int) -> Tuple[List[SourceDirectoryFile], int]:
     all_files = []
 
     for root, dirs, files in os.walk(database):
@@ -118,7 +123,7 @@ async def get_files_from_dir(database: str, page: int, items_per_page: int) -> L
                 all_files.append(SourceDirectoryFile(id=str(uuid.uuid4()), name=file))
     start = (page - 1) * items_per_page
     end = start + items_per_page
-    return all_files[start:end]
+    return all_files[start:end], len(all_files)
 
 
 def run_ingest(database_name: str, collection_name: Optional[str] = None):
@@ -142,15 +147,6 @@ async def root():
     return {"ping": "pong!"}
 
 
-@app.post("/api/set-translation")
-async def set_translation(body: TranslationBody):
-    locale = body.locale
-    set_key('.env', 'TRANSLATE_DST_LANG', locale)
-    set_key('.env', 'TRANSLATE_QUESTION', 'true')
-    set_key('.env', 'TRANSLATE_ANSWER', 'true')
-    set_key('.env', 'TRANSLATE_DOCS', 'true')
-
-
 @app.get('/api/databases')
 async def get_database_names_and_collections():
     base_dir = "./db"
@@ -172,7 +168,7 @@ async def get_database_names_and_collections():
         return HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/database/{database_name}", response_model=List[SourceDirectoryFile])
+@app.get("/api/database/{database_name}", response_model=SourceDirectoryFilePaginated)
 async def get_database_files(database_name: str, page: int = Query(1, ge=1), items_per_page: int = Query(10, ge=1)):
     base_dir = os.path.join(".", "source_documents")
     absolute_base_dir = os.path.abspath(base_dir)
@@ -180,8 +176,8 @@ async def get_database_files(database_name: str, page: int = Query(1, ge=1), ite
     if not os.path.exists(database_dir) or not os.path.isdir(database_dir):
         raise HTTPException(status_code=404, detail="Database not found")
 
-    files = await get_files_from_dir(database_dir, page, items_per_page)
-    return files
+    files, total_count = await get_files_from_dir(database_dir, page, items_per_page)
+    return {"total_count": total_count, "items": files}
 
 
 @app.get("/api/database/{database_name}/collection/{collection_name}", response_model=List[SourceDirectoryFile])
