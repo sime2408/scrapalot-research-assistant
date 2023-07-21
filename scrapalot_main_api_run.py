@@ -8,7 +8,7 @@ from typing import List, Optional, Union, Tuple
 from urllib.parse import unquote
 
 from deep_translator import GoogleTranslator
-from dotenv import load_dotenv
+from dotenv import load_dotenv, set_key
 from fastapi import FastAPI, Depends, HTTPException, Query, Request
 from langchain.callbacks import StreamingStdOutCallbackHandler
 from pydantic import BaseModel
@@ -17,7 +17,7 @@ from starlette.responses import FileResponse, HTMLResponse
 from starlette.staticfiles import StaticFiles
 
 from scrapalot_main import get_llm_instance
-from scripts.app_environment import translate_src, translate_q, chromaDB_manager, translate_a, model_n_answer_words, api_host, api_port, api_scheme
+from scripts.app_environment import translate_src, translate_q, chromaDB_manager, translate_a, api_host, api_port, api_scheme
 from scripts.app_qa_builder import process_database_question, process_query
 
 sys.path.append(str(Path(sys.argv[0]).resolve().parent.parent))
@@ -114,11 +114,22 @@ def list_of_collections(database_name: str):
     return client.list_collections()
 
 
+def create_database(database_name):
+    directory_path = os.path.join(".", "source_documents", database_name);
+    db_path = f"./db/{database_name}"
+    os.makedirs(directory_path)
+    os.makedirs(db_path)
+    set_key('.env', 'INGEST_SOURCE_DIRECTORY', directory_path)
+    set_key('.env', 'INGEST_PERSIST_DIRECTORY', db_path)
+    print(f"Created new database: {directory_path}")
+    return directory_path, db_path
+
+
 async def get_files_from_dir(database: str, page: int, items_per_page: int) -> Tuple[List[SourceDirectoryFile], int]:
     all_files = []
 
     for root, dirs, files in os.walk(database):
-        for file in sorted(files):  # Added sorting here.
+        for file in sorted(files, reverse=True):  # Sort files in descending order.
             if not file.startswith('.'):
                 all_files.append(SourceDirectoryFile(id=str(uuid.uuid4()), name=file))
     start = (page - 1) * items_per_page
@@ -164,6 +175,15 @@ async def get_database_names_and_collections():
             })
 
         return database_info
+    except Exception as e:
+        return HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/database/{database_name}/new")
+async def create_new_database(database_name: str):
+    try:
+        create_database(database_name)
+        return {"message": "OK", "database_name": database_name}
     except Exception as e:
         return HTTPException(status_code=500, detail=str(e))
 
@@ -221,7 +241,7 @@ async def query_files(body: QueryBody, llm=Depends(get_llm)):
         seeking_from = database_name + '/' + collection_name if collection_name and collection_name != database_name else database_name
         print(f"\n\033[94mSeeking for answer from: [{seeking_from}]. May take some minutes...\033[0m")
         qa = await process_database_question(database_name, llm, collection_name)
-        answer, docs = process_query(qa, question, model_n_answer_words, chat_history, chromadb_get_only_relevant_docs=False, translate_answer=False)
+        answer, docs = process_query(qa, question, chat_history, chromadb_get_only_relevant_docs=False, translate_answer=False)
 
         if translate_a or locale != 'en' and translate_src == 'en':
             answer = GoogleTranslator(source=translate_src, target=locale).translate(answer)

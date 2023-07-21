@@ -50,7 +50,6 @@ MODEL_N_BATCH:  The number of tokens in the prompt that are fed into the model a
 but the query may be very slow; a high value, on the other hand, speeds things up at the cost of higher memory usage.
 Optimal value differs a lot depending on the model (8 works well for GPT4All, and 1024 is better for LlamaCpp)
 MODEL_TOP_P: The top-p value to use for sampling.
-MODEL_ANSWER_N_WORDS: How many max words will be returned in the answer, defaults to 200 (decrese if you have less resources)
 
 TRANSLATE_QUESTION: Whether or not turn on translation of questionto english. Based on GoogleTranslate HTTP calls.
 TRANSLATE_ANSWER: Whether or not turn on translation of answers from english to your language
