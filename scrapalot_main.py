@@ -92,7 +92,7 @@ def get_llm_instance(*callback_handler: BaseCallbackHandler):
         if huggingface_model_base_name is not None:
             if not gpu_is_enabled:
                 logging.info("Using Llamacpp for quantized models")
-                model_path = hf_hub_download(local_dir=os.path.abspath('models'), repo_id=model_path_or_id, filename=huggingface_model_base_name)
+                model_path = hf_hub_download(local_dir=os.path.abspath('models'), local_dir_use_symlinks=True, repo_id=model_path_or_id, filename=huggingface_model_base_name)
                 return LlamaCpp(model_path=model_path, n_ctx=model_n_ctx, max_tokens=2048, temperature=model_temperature, repeat_penalty=1.15)
 
             else:
