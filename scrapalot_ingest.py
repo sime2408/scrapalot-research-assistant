@@ -2,15 +2,14 @@
 import glob
 import os
 import sys
-from collections import defaultdict
 from multiprocessing import Pool
 from time import monotonic
-from typing import List, Optional, Dict
+from typing import List, Optional
 
 from dotenv import set_key
 from langchain.docstore.document import Document
 from langchain.embeddings import HuggingFaceInstructEmbeddings
-from langchain.text_splitter import RecursiveCharacterTextSplitter, Language
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
 from tqdm import tqdm
 
@@ -58,26 +57,6 @@ def load_documents(source_dir: str, collection_name: Optional[str], ignored_file
     return results
 
 
-def get_language(file_extension: str) -> Language:
-    ext_to_lang = {
-        ".java": Language.JAVA,
-        ".js": Language.JS,
-        ".py": Language.PYTHON
-    }
-
-    return ext_to_lang.get(file_extension)
-
-
-def split_documents(documents: list[Document]) -> Dict[Optional[Language], list[Document]]:
-    lang_to_docs = defaultdict(list)
-    for doc in documents:
-        file_extension = os.path.splitext(doc.metadata["source"])[1]
-        lang = get_language(file_extension)
-        lang_to_docs[lang].append(doc)  # Default to None if the file extension does not match any language
-
-    return lang_to_docs
-
-
 def process_documents(collection_name: Optional[str] = None, ignored_files: List[str] = []) -> List[Document]:
     """
     Load documents and split them into chunks.
@@ -89,22 +68,10 @@ def process_documents(collection_name: Optional[str] = None, ignored_files: List
         exit(0)
     print(f"Loaded {len(documents)} new documents from {source_directory}")
 
-    texts = []
-    for lang, docs in split_documents(documents).items():
-        if lang is None:
-            splitten_docs = RecursiveCharacterTextSplitter(
-                chunk_size=ingest_chunk_size if ingest_chunk_size else args.ingest_chunk_size,
-                chunk_overlap=ingest_chunk_overlap if ingest_chunk_overlap else args.ingest_chunk_overlap
-            ).split_documents(docs)
-        else:
-            print(f"Ingesting {lang} file:")
-            splitten_docs = RecursiveCharacterTextSplitter.from_language(
-                language=lang,
-                chunk_size=ingest_chunk_size if ingest_chunk_size else args.ingest_chunk_size,
-                chunk_overlap=ingest_chunk_overlap if ingest_chunk_overlap else args.ingest_chunk_overlap
-            ).split_documents(docs)
-
-        texts.extend(splitten_docs)
+    texts = RecursiveCharacterTextSplitter(
+        chunk_size=ingest_chunk_size if ingest_chunk_size else args.ingest_chunk_size,
+        chunk_overlap=ingest_chunk_overlap if ingest_chunk_overlap else args.ingest_chunk_overlap
+    ).split_documents(documents)
 
     print(f"Split into {len(texts)} chunks of text (max. {ingest_chunk_size} tokens each)")
     return texts
@@ -265,10 +232,30 @@ def main(source_dir: str, persist_dir: str, db_name: str, sub_collection_name: O
 if __name__ == "__main__":
     try:
 
-        if args.ingest_dbname:
+        if args.ingest_all:  # Check if --ingest-all is provided
+            base_dir = os.path.join(".", "source_documents")
+            sorted_list = sorted(os.listdir(base_dir))
+            for dir_name in sorted_list:  # Iterate over all directories in source_documents
+                if not dir_name.startswith("."):
+                    db_name = dir_name
+                    source_directory = os.path.join(".", "source_documents", db_name)
+                    persist_directory = os.path.join(".", "db", db_name)
+
+                    if not os.path.exists(source_directory):
+                        os.makedirs(source_directory)
+
+                    if not os.path.exists(persist_directory):
+                        os.makedirs(persist_directory)
+
+                    if args.collection:
+                        sub_collection_name = args.collection
+                        main(source_directory, persist_directory, db_name, sub_collection_name)
+                    else:
+                        main(source_directory, persist_directory, db_name)
+        elif args.ingest_dbname:
             db_name = args.ingest_dbname
-            source_directory = f"./source_documents/{db_name}"
-            persist_directory = f"./db/{db_name}"
+            source_directory = os.path.join(".", "source_documents", db_name)
+            persist_directory = os.path.join(".", "db", db_name)
 
             if not os.path.exists(source_directory):
                 os.makedirs(source_directory)

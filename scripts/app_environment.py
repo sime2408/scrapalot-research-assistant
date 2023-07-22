@@ -184,6 +184,11 @@ def parse_arguments():
         type=str,
         help="Name of the database directory",
     )
+    parser.add_argument(
+        "--ingest-all",
+        action="store_true",
+        help="Ingest all directories in source_documents"
+    )
 
     return parser.parse_args()
 
