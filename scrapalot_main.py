@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
-import asyncio
 import logging
 import os
-from time import monotonic
 
 import torch
 from auto_gptq import AutoGPTQForCausalLM
@@ -10,17 +8,12 @@ from dotenv import load_dotenv
 from huggingface_hub import hf_hub_download
 from langchain import HuggingFacePipeline
 from langchain.callbacks.base import BaseCallbackHandler
-from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.llms import LlamaCpp, GPT4All, OpenAI
-from langchain.schema import Document
 from torch import cuda as torch_cuda
 from transformers import AutoTokenizer, AutoModelForCausalLM, LlamaTokenizer, LlamaForCausalLM, GenerationConfig, pipeline
 
-from scripts import app_logs
 from scripts.app_environment import model_type, openai_api_key, model_n_ctx, model_temperature, model_top_p, model_n_batch, model_use_mlock, model_verbose, \
-    args, db_get_only_relevant_docs, gpt4all_backend, model_path_or_id, gpu_is_enabled, cpu_model_n_threads, gpu_model_n_threads, huggingface_model_base_name
-from scripts.app_qa_builder import print_document_chunk, print_hyperlink, process_database_question, process_query
-from scripts.app_user_prompt import prompt
+    args, gpt4all_backend, model_path_or_id, gpu_is_enabled, cpu_model_n_threads, gpu_model_n_threads, huggingface_model_base_name
 
 # Ensure TOKENIZERS_PARALLELISM is set before importing any HuggingFace module.
 os.environ["TOKENIZERS_PARALLELISM"] = "true"
@@ -99,7 +92,7 @@ def get_llm_instance(*callback_handler: BaseCallbackHandler):
         if huggingface_model_base_name is not None:
             if not gpu_is_enabled:
                 logging.info("Using Llamacpp for quantized models")
-                model_path = hf_hub_download(repo_id=model_path_or_id, filename=huggingface_model_base_name)
+                model_path = hf_hub_download(local_dir=os.path.abspath('models'), repo_id=model_path_or_id, filename=huggingface_model_base_name)
                 return LlamaCpp(model_path=model_path, n_ctx=model_n_ctx, max_tokens=2048, temperature=model_temperature, repeat_penalty=1.15)
 
             else:
