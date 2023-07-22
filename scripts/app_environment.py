@@ -84,7 +84,7 @@ ingest_target_source_chunks = int(os.environ.get('INGEST_TARGET_SOURCE_CHUNKS', 
 
 # Set the basic model settings
 model_type = os.environ.get("MODEL_TYPE", "llamacpp")
-model_n_ctx = os.environ.get("MODEL_N_CTX", "1000")
+model_n_ctx = os.environ.get("MODEL_N_CTX", "4096")
 model_temperature = float(os.environ.get("MODEL_TEMPERATURE", "0.4"))
 model_use_mlock = os.environ.get("MODEL_USE_MLOCK", "true") == "true"
 model_verbose = os.environ.get("MODEL_VERBOSE", "false") == "true"
