@@ -1,3 +1,4 @@
+import argparse
 import os
 import subprocess
 
@@ -12,7 +13,18 @@ def convert_files(root_folder, src_extension, dst_extension, converter_cmd):
                 new_file_name = os.path.splitext(f_name)[0] + dst_extension
                 # Use the specified command line tool
                 subprocess.run([converter_cmd, f_name, new_file_name], shell=True)
+                # Delete the source file after conversion
+                os.remove(f_name)
 
+
+# Create an argument parser
+parser = argparse.ArgumentParser(description="Convert files from one format to another.")
+parser.add_argument("-s", "--subdirectory", help="Subdirectory to parse instead of 'source_documents'.")
+args = parser.parse_args()
 
 # Source and target file extensions
-convert_files('source_documents', '.epub', '.pdf', 'ebook-convert')
+root_folder = 'source_documents'
+if args.subdirectory:
+    root_folder = os.path.join(root_folder, args.subdirectory)
+
+convert_files(root_folder, '.epub', '.pdf', 'ebook-convert')
