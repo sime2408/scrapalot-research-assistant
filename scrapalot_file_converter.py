@@ -4,6 +4,14 @@ import subprocess
 
 
 def convert_files(root_folder, src_extension, dst_extension, converter_cmd):
+    """
+    The Requirement to run this script is to install Calibre eBook management software
+    :param root_folder: where your documents are stored
+    :param src_extension: from which format you want to convert
+    :param dst_extension: to which format you want to convert
+    :param converter_cmd: CMD tool to convert the files
+    :return:
+    """
     # Walk through the root folder and its sub-folders
     for dir_path, dirs, files in os.walk(root_folder):
         for filename in files:
