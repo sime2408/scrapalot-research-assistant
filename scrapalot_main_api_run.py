@@ -1,20 +1,20 @@
+from concurrent.futures import ThreadPoolExecutor
+
 import os
 import subprocess
 import sys
 import uuid
-from concurrent.futures import ThreadPoolExecutor
-from pathlib import Path
-from typing import List, Optional, Union, Tuple
-from urllib.parse import unquote
-
 from deep_translator import GoogleTranslator
 from dotenv import load_dotenv, set_key
 from fastapi import FastAPI, Depends, HTTPException, Query, Request
 from langchain.callbacks import StreamingStdOutCallbackHandler
-from pydantic import BaseModel
+from pathlib import Path
+from pydantic import BaseModel, root_validator, Field
 from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import FileResponse, HTMLResponse
 from starlette.staticfiles import StaticFiles
+from typing import List, Optional, Union, Tuple
+from urllib.parse import unquote
 
 from scrapalot_main import get_llm_instance
 from scripts.app_environment import translate_src, translate_q, chromaDB_manager, translate_a, api_host, api_port, api_scheme
@@ -45,12 +45,27 @@ load_dotenv()
 ###############################################################################
 # model classes
 ###############################################################################
+
+class QueryBodyFilter(BaseModel):
+    filter_document: bool = Field(False, description="Whether to filter the document or not.")
+    filter_document_name: Optional[str] = Field(None, description="Name of the document to filter.")
+    translate_chunks: bool = Field(True, description="Whether to translate chunks or not.")
+
+    @root_validator(pre=True)
+    def check_filter(cls, values):
+        filter_document = values.get('filter_document')
+        filter_document_name = values.get('filter_document_name')
+        if filter_document and not filter_document_name:
+            raise ValueError("filter_document is True but filter_document_name is not provided.")
+        return values
+
+
 class QueryBody(BaseModel):
     database_name: str
     collection_name: str
     question: str
-    translate_chunks: bool = True
     locale: str
+    filter_options: QueryBodyFilter
 
 
 class TranslationBody(BaseModel):
@@ -232,7 +247,8 @@ async def query_files(body: QueryBody, llm=Depends(get_llm)):
     collection_name = body.collection_name
     question = body.question
     locale = body.locale
-    translate_chunks = body.translate_chunks
+    filter_options = body.filter_options
+    translate_chunks = filter_options.translate_chunks
 
     try:
         if translate_q:
@@ -240,7 +256,9 @@ async def query_files(body: QueryBody, llm=Depends(get_llm)):
 
         seeking_from = database_name + '/' + collection_name if collection_name and collection_name != database_name else database_name
         print(f"\n\033[94mSeeking for answer from: [{seeking_from}]. May take some minutes...\033[0m")
-        qa = await process_database_question(database_name, llm, collection_name)
+
+        qa = await process_database_question(database_name, llm, collection_name, filter_options.filter_document, filter_options.filter_document_name)
+
         answer, docs = process_query(qa, question, chat_history, chromadb_get_only_relevant_docs=False, translate_answer=False)
 
         if translate_a or locale != 'en' and translate_src == 'en':

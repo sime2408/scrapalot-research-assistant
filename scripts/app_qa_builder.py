@@ -1,8 +1,5 @@
 import os
 import textwrap
-from typing import Optional
-from urllib.request import pathname2url
-
 from deep_translator import GoogleTranslator
 from langchain import PromptTemplate
 from langchain.chains import ConversationalRetrievalChain
@@ -10,6 +7,8 @@ from langchain.chains.retrieval_qa.base import BaseRetrievalQA
 from langchain.embeddings import OpenAIEmbeddings, HuggingFaceInstructEmbeddings
 from langchain.vectorstores import Chroma
 from openai.error import AuthenticationError
+from typing import Optional
+from urllib.request import pathname2url
 
 from .app_environment import translate_dst, translate_src, translate_docs, translate_q, ingest_target_source_chunks, args, openai_use, ingest_embeddings_model, gpu_is_enabled, \
     chromaDB_manager
@@ -39,7 +38,7 @@ def print_document_chunk(doc):
         exit(0)
 
 
-async def process_database_question(database_name, llm, collection_name: Optional[str]):
+async def process_database_question(database_name, llm, collection_name: Optional[str], filter_document: bool, filter_document_name: Optional[str]):
     embeddings_kwargs = {'device': 'cuda'} if gpu_is_enabled else {'device': 'cpu'}
     encode_kwargs = {'normalize_embeddings': False}
     embeddings = OpenAIEmbeddings() if openai_use else HuggingFaceInstructEmbeddings(
@@ -50,10 +49,14 @@ async def process_database_question(database_name, llm, collection_name: Optiona
     db = Chroma(persist_directory=persist_dir,
                 embedding_function=embeddings,
                 collection_name=collection_name if collection_name else args.collection,
-                client_settings=chromaDB_manager.get_chroma_setting(persist_dir)
-                )
+                client_settings=chromaDB_manager.get_chroma_setting(persist_dir))
 
-    retriever = db.as_retriever(search_kwargs={"k": ingest_target_source_chunks if ingest_target_source_chunks else args.ingest_target_source_chunks})
+    search_kwargs = {"k": ingest_target_source_chunks if ingest_target_source_chunks else args.ingest_target_source_chunks}
+
+    if filter_document:
+        search_kwargs["filter"] = {'source': {'$eq': os.path.join('.', 'source_documents', database_name, filter_document_name)}}
+
+    retriever = db.as_retriever(search_kwargs=search_kwargs)
 
     template_llama = """
     System: You are a helpful, respectful and honest assistant. Always answer as helpfully as possible, while being safe.
