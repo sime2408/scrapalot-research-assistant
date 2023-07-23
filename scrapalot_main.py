@@ -5,6 +5,7 @@ import os
 import torch
 from auto_gptq import AutoGPTQForCausalLM
 from dotenv import load_dotenv
+from huggingface_hub import hf_hub_download
 from langchain import HuggingFacePipeline
 from langchain.callbacks.base import BaseCallbackHandler
 from langchain.llms import LlamaCpp, GPT4All, OpenAI
@@ -88,41 +89,50 @@ def get_llm_instance(*callback_handler: BaseCallbackHandler):
             callbacks=callbacks,
         )
     elif model_type == "huggingface":
-        if gpu_is_enabled and huggingface_model_base_name is not None:
-            logging.info("Tokenizer loaded")
-            tokenizer = AutoTokenizer.from_pretrained(model_path_or_id, use_fast=True)
-            model = AutoGPTQForCausalLM.from_quantized(
-                model_name_or_path=model_path_or_id,
-                model_basename=huggingface_model_base_name if ".safetensors" not in huggingface_model_base_name else huggingface_model_base_name.replace(".safetensors", ""),
-                use_safetensors=True,
-                trust_remote_code=True,
-                device="cuda:0",
-                use_triton=False,
-                quantize_config=None,
-            )
-        elif gpu_is_enabled:
-            logging.info("Using AutoModelForCausalLM for full models")
-            tokenizer = AutoTokenizer.from_pretrained(model_path_or_id)
-            model = AutoModelForCausalLM.from_pretrained(
-                model_path_or_id,
-                device_map="auto",
-                torch_dtype=torch.float16,
-                low_cpu_mem_usage=True,
-                trust_remote_code=True,
-                # max_memory={0: "15GB"} # Uncomment this line if you encounter CUDA out of memory errors
-            )
-            model.tie_weights()
+        if huggingface_model_base_name is not None:
+            if not gpu_is_enabled:
+                logging.info("Using Llamacpp for quantized models")
+                model_path = hf_hub_download(local_dir=os.path.abspath('models'), local_dir_use_symlinks=True, repo_id=model_path_or_id, filename=huggingface_model_base_name)
+                return LlamaCpp(model_path=model_path, n_ctx=model_n_ctx, max_tokens=2048, temperature=model_temperature, repeat_penalty=1.15)
+
+            else:
+                logging.info("Using AutoGPTQForCausalLM for quantized models")
+                tokenizer = AutoTokenizer.from_pretrained(model_path_or_id, use_fast=True)
+                logging.info("Tokenizer loaded")
+
+                model = AutoGPTQForCausalLM.from_quantized(
+                    model_name_or_path=model_path_or_id,
+                    model_basename=huggingface_model_base_name if ".safetensors" not in huggingface_model_base_name else huggingface_model_base_name.replace(".safetensors", ""),
+                    use_safetensors=True,
+                    trust_remote_code=True,
+                    device="cuda:0",
+                    use_triton=False,
+                    quantize_config=None,
+                )
         else:
-            logging.info("Using LlamaTokenizer")
-            tokenizer = LlamaTokenizer.from_pretrained(model_path_or_id)
-            model = LlamaForCausalLM.from_pretrained(model_path_or_id)
+            if gpu_is_enabled:
+                logging.info("Using AutoModelForCausalLM for full models")
+                tokenizer = AutoTokenizer.from_pretrained(model_path_or_id)
+                model = AutoModelForCausalLM.from_pretrained(
+                    model_path_or_id,
+                    device_map="auto",
+                    torch_dtype=torch.float16,
+                    low_cpu_mem_usage=True,
+                    trust_remote_code=True,
+                    # max_memory={0: "15GB"} # Uncomment this line if you encounter CUDA out of memory errors
+                )
+                model.tie_weights()
+            else:
+                logging.info("Using LlamaTokenizer")
+                tokenizer = LlamaTokenizer.from_pretrained(model_path_or_id)
+                model = LlamaForCausalLM.from_pretrained(model_path_or_id)
 
         return HuggingFacePipeline(pipeline=pipeline(
             "text-generation",
             model=model,
             tokenizer=tokenizer,
-            max_length=2048,
-            temperature=0,
+            max_length=model_n_ctx,
+            temperature=model_temperature,
             top_p=model_top_p,
             repetition_penalty=1.15,
             generation_config=GenerationConfig.from_pretrained(model_path_or_id),

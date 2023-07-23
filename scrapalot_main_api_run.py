@@ -4,7 +4,7 @@ import sys
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Tuple
 from urllib.parse import unquote
 
 from deep_translator import GoogleTranslator
@@ -17,7 +17,7 @@ from starlette.responses import FileResponse, HTMLResponse
 from starlette.staticfiles import StaticFiles
 
 from scrapalot_main import get_llm_instance
-from scripts.app_environment import translate_src, translate_q, chromaDB_manager, translate_a, model_n_answer_words, api_host, api_port, api_scheme
+from scripts.app_environment import translate_src, translate_q, chromaDB_manager, translate_a, api_host, api_port, api_scheme
 from scripts.app_qa_builder import process_database_question, process_query
 
 sys.path.append(str(Path(sys.argv[0]).resolve().parent.parent))
@@ -67,6 +67,11 @@ class SourceDirectoryFile(BaseModel):
     name: str
 
 
+class SourceDirectoryFilePaginated(BaseModel):
+    total_count: int
+    items: List[SourceDirectoryFile]
+
+
 class TranslationItem(BaseModel):
     src_lang: str
     dst_lang: str
@@ -109,16 +114,27 @@ def list_of_collections(database_name: str):
     return client.list_collections()
 
 
-async def get_files_from_dir(database: str, page: int, items_per_page: int) -> List[SourceDirectoryFile]:
+def create_database(database_name):
+    directory_path = os.path.join(".", "source_documents", database_name);
+    db_path = f"./db/{database_name}"
+    os.makedirs(directory_path)
+    os.makedirs(db_path)
+    set_key('.env', 'INGEST_SOURCE_DIRECTORY', directory_path)
+    set_key('.env', 'INGEST_PERSIST_DIRECTORY', db_path)
+    print(f"Created new database: {directory_path}")
+    return directory_path, db_path
+
+
+async def get_files_from_dir(database: str, page: int, items_per_page: int) -> Tuple[List[SourceDirectoryFile], int]:
     all_files = []
 
     for root, dirs, files in os.walk(database):
-        for file in sorted(files):  # Added sorting here.
+        for file in sorted(files, reverse=True):  # Sort files in descending order.
             if not file.startswith('.'):
                 all_files.append(SourceDirectoryFile(id=str(uuid.uuid4()), name=file))
     start = (page - 1) * items_per_page
     end = start + items_per_page
-    return all_files[start:end]
+    return all_files[start:end], len(all_files)
 
 
 def run_ingest(database_name: str, collection_name: Optional[str] = None):
@@ -142,15 +158,6 @@ async def root():
     return {"ping": "pong!"}
 
 
-@app.post("/api/set-translation")
-async def set_translation(body: TranslationBody):
-    locale = body.locale
-    set_key('.env', 'TRANSLATE_DST_LANG', locale)
-    set_key('.env', 'TRANSLATE_QUESTION', 'true')
-    set_key('.env', 'TRANSLATE_ANSWER', 'true')
-    set_key('.env', 'TRANSLATE_DOCS', 'true')
-
-
 @app.get('/api/databases')
 async def get_database_names_and_collections():
     base_dir = "./db"
@@ -172,7 +179,16 @@ async def get_database_names_and_collections():
         return HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/database/{database_name}", response_model=List[SourceDirectoryFile])
+@app.post("/api/database/{database_name}/new")
+async def create_new_database(database_name: str):
+    try:
+        create_database(database_name)
+        return {"message": "OK", "database_name": database_name}
+    except Exception as e:
+        return HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/database/{database_name}", response_model=SourceDirectoryFilePaginated)
 async def get_database_files(database_name: str, page: int = Query(1, ge=1), items_per_page: int = Query(10, ge=1)):
     base_dir = os.path.join(".", "source_documents")
     absolute_base_dir = os.path.abspath(base_dir)
@@ -180,8 +196,8 @@ async def get_database_files(database_name: str, page: int = Query(1, ge=1), ite
     if not os.path.exists(database_dir) or not os.path.isdir(database_dir):
         raise HTTPException(status_code=404, detail="Database not found")
 
-    files = await get_files_from_dir(database_dir, page, items_per_page)
-    return files
+    files, total_count = await get_files_from_dir(database_dir, page, items_per_page)
+    return {"total_count": total_count, "items": files}
 
 
 @app.get("/api/database/{database_name}/collection/{collection_name}", response_model=List[SourceDirectoryFile])
@@ -225,7 +241,7 @@ async def query_files(body: QueryBody, llm=Depends(get_llm)):
         seeking_from = database_name + '/' + collection_name if collection_name and collection_name != database_name else database_name
         print(f"\n\033[94mSeeking for answer from: [{seeking_from}]. May take some minutes...\033[0m")
         qa = await process_database_question(database_name, llm, collection_name)
-        answer, docs = process_query(qa, question, model_n_answer_words, chat_history, chromadb_get_only_relevant_docs=False, translate_answer=False)
+        answer, docs = process_query(qa, question, chat_history, chromadb_get_only_relevant_docs=False, translate_answer=False)
 
         if translate_a or locale != 'en' and translate_src == 'en':
             answer = GoogleTranslator(source=translate_src, target=locale).translate(answer)

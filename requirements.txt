@@ -1,7 +1,7 @@
 langchain==0.0.228
-gpt4all==1.0.3
 chromadb==0.3.26
-llama-cpp-python==0.1.72
+llama-cpp-python==0.1.74
+gpt4all==1.0.6
 urllib3==2.0.3
 PyMuPDF==1.22.5
 python-dotenv==1.0.0
@@ -16,6 +16,7 @@ deep-translator==1.11.4
 openai==0.27.8
 huggingface==0.0.1
 huggingface_hub==0.16.4
+xformers==0.0.20
 InstructorEmbedding==1.0.1
 sentence_transformers==2.2.2
 transformers==4.30.2
@@ -25,7 +26,7 @@ torch==2.0.1
 torchvision==0.15.2
 torchaudio===2.0.2
 PyObjC==8.5; sys_platform == 'darwin' and platform_machine == 'x86_64'
-fastapi==0.100.0
+fastapi==0.95.2
 uvicorn==0.22.0
 gunicorn==20.1.0
 python-multipart==0.0.6

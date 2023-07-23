@@ -33,8 +33,8 @@ services:
       - INGEST_PERSIST_DIRECTORY=db
       - INGEST_EMBEDDINGS_MODEL=hkunlp/instructor-large
       - MODEL_TYPE=llamacpp
-      - MODEL_ID_OR_PATH=/home/scrapalot/scrapalot-chat/models/WizardLM-7B-uncensored.ggmlv3.q8_0.bin
-      - MODEL_N_CTX=1000
+      - MODEL_ID_OR_PATH=/home/scrapalot/scrapalot-chat/models/llama-2-13b.ggmlv3.q8_0.bin
+      - MODEL_N_CTX=4096
     volumes:
       - ./models:/home/scrapalot/scrapalot-chat/models
       - ./db:/home/scrapalot/scrapalot-chat/db
@@ -68,8 +68,8 @@ services:
       - INGEST_PERSIST_DIRECTORY=db
       - INGEST_EMBEDDINGS_MODEL=hkunlp/instructor-large
       - MODEL_TYPE=llamacpp
-      - MODEL_ID_OR_PATH=/home/scrapalot/scrapalot-chat/models/WizardLM-7B-uncensored.ggmlv3.q8_0.bin
-      - MODEL_N_CTX=1000
+      - MODEL_ID_OR_PATH=/home/scrapalot/scrapalot-chat/models/llama-2-13b.ggmlv3.q8_0.bin
+      - MODEL_N_CTX=4096
     volumes:
       - ./models:/home/scrapalot/scrapalot-chat/models
       - ./db:/home/scrapalot/scrapalot-chat/db

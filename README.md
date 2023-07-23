@@ -51,7 +51,6 @@ MODEL_N_BATCH:  The number of tokens in the prompt that are fed into the model a
 but the query may be very slow; a high value, on the other hand, speeds things up at the cost of higher memory usage.
 Optimal value differs a lot depending on the model (8 works well for GPT4All, and 1024 is better for LlamaCpp)
 MODEL_TOP_P: The top-p value to use for sampling.
-MODEL_ANSWER_N_WORDS: How many max words will be returned in the answer, defaults to 200 (decrese if you have less resources)
 
 TRANSLATE_QUESTION: Whether or not turn on translation of questionto english. Based on GoogleTranslate HTTP calls.
 TRANSLATE_ANSWER: Whether or not turn on translation of answers from english to your language
@@ -392,7 +391,7 @@ pip3 uninstall llama-cpp-python
 Install llama:
 
 ```shell
-CMAKE_ARGS="-DLLAMA_CUBLAS=on" FORCE_CMAKE=1 pip install --upgrade --force-reinstall llama-cpp-python==0.1.72 --no-cache-dir
+CMAKE_ARGS="-DLLAMA_CUBLAS=on" FORCE_CMAKE=1 pip install --upgrade --force-reinstall llama-cpp-python==0.1.74 --no-cache-dir
 ```
 
 Modify LLM code to accept `n_gpu_layers`:
@@ -435,12 +434,12 @@ You can use the included installer batch file to install the required dependenci
    To install with cuBLAS, set the `LLAMA_CUBLAS=1` environment variable before installing:
 
     ```powershell
-    $Env:CMAKE_ARGS="-DLLAMA_CUBLAS=on"; $Env:FORCE_CMAKE=1; pip3 install llama-cpp-python==0.1.72 --force-reinstall --upgrade --no-cache-dir
+    $Env:CMAKE_ARGS="-DLLAMA_CUBLAS=on"; $Env:FORCE_CMAKE=1; pip3 install llama-cpp-python==0.1.74 --force-reinstall --upgrade --no-cache-dir
     ```
 
     - Bash:
     ```bash
-    CMAKE_ARGS="-DLLAMA_CUBLAS=on" FORCE_CMAKE=1 pip3 install llama-cpp-python==0.1.72 --force-reinstall --upgrade --no-cache-dir
+    CMAKE_ARGS="-DLLAMA_CUBLAS=on" FORCE_CMAKE=1 pip3 install llama-cpp-python==0.1.74 --force-reinstall --upgrade --no-cache-dir
     ```
 
 4. Run `scrapalot_ingest.py` and `scrapalot_main.py` as usual
