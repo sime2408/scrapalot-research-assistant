@@ -127,6 +127,10 @@ api_port = int(os.environ.get("API_PORT", "8000"))
 api_scheme = os.environ.get("API_SCHEME", "http")
 api_base_url = os.environ.get("API_BASE_URL", f"{api_scheme}://{api_host}:{api_port}/api")
 
+EmbeddingModel = text_embeddings.EmbeddingModel(model_name="sentence-transformers/all-MiniLM-L6-v2",load_method='Sentence-Transformers', device="cuda", batch_size=25)
+Faiss_Index = index.Faiss_Index(embeddings=None,shape=EmbeddingModel.embed_text(["Sample"])[0].shape[1], db_name="my_documents", index_dir='index')
+Reranker = retriever_reranker.Reranker(model_name="cross-encoder/ms-marco-MiniLM-L-12-v2", device="cuda", batch_size=10)
+Retriever = retriever_reranker.Retriever(Reranker)
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
@@ -194,25 +198,3 @@ def parse_arguments():
 
 
 args = parse_arguments()
-
-
-class ChromaDBClientManager:
-    def __init__(self):
-        self.clients = {}
-
-    @staticmethod
-    def get_chroma_setting(persist_dir: str):
-        return Settings(
-            chroma_db_impl='duckdb+parquet',
-            persist_directory=persist_dir,
-            anonymized_telemetry=False
-        )
-
-    def get_client(self, database_name: str):
-        if database_name not in self.clients:
-            persist_directory = f"./db/{database_name}"
-            self.clients[database_name] = chromadb.Client(self.get_chroma_setting(persist_directory))
-        return self.clients[database_name]
-
-
-chromaDB_manager = ChromaDBClientManager()
