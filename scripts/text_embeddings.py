@@ -2,7 +2,7 @@ import torch
 import numpy as np
 
 class EmbeddingModel():
-  def __init__(self, model_name="facebook/contriever-msmarco",load_method='AutoModel', device="cpu", batch_size=50):
+  def __init__(self, model_name="sentence-transformers/all-MiniLM-L6-v2",load_method='Sentence-Transformers', device="cuda", batch_size=50):
     #Set device
     if not device == "cpu":
       self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -53,9 +53,7 @@ class EmbeddingModel():
         outputs = self.model(**inputs)
         embeddings = self.mean_pooling(outputs, inputs['attention_mask'])
         embeddings = np.asarray(embeddings.cpu().detach().numpy())
-      elif self.load_method == "Sentence-Transformers":
-        embeddings = self.model.encode(batch)
-      elif self.load_method == "Instructor":
+      else:
         embeddings = self.model.encode(batch)
 
       all_embeddings.extend(embeddings)
