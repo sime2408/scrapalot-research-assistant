@@ -5,27 +5,24 @@ import pandas as pd
 import pyarrow.parquet as pq
 
 class Faiss_Index:
-    def __init__(self, embeddings, index_name, metadata_store, index_dir='/tmp'):
-      self.index_key = index_name
-      self.index_dir = index_dir
-
-      index_path = os.path.join(self.index_dir, self.index_name)
+    def __init__(self, embeddings, db_name="my_documents", index_dir='index'):
+        index_path = os.path.join(self.index_dir, self.index_name)
       
-      # Check if index already exists
-      if os.path.exists(index_path):
-          self.index = faiss.read_index(index_path)
-      else:
-          self.index = faiss.IndexFlatL2(embeddings.shape[1])
-          self.index = faiss.IndexIDMap(self.index) 
-          self.index.add(embeddings)
-          faiss.write_index(self.index, index_path)
-
+        # Check if index already exists
+        if os.path.exists(index_path):
+            self.index = faiss.read_index(index_path)
+        else:
+            index = faiss.IndexFlatL2(embeddings.shape[1])
+            index = faiss.IndexIDMap(index_path) 
+            faiss.write_index(index, index_path)
+        self.index_path = index_path
+        self.index = index
+    
     def search(self, query, k):
         return self.index.search(query, k)
 
-    def load(self):
+    def load(self,index_path):
         # Load index from disk
-        index_path = os.path.join(self.index_dir, self.index_name)
         self.index = faiss.read_index(index_path)
 
     def add(self, embeddings, chunk_ids):
@@ -46,30 +43,24 @@ class Faiss_Index:
         return self.index.reconstruct_n(indexes)
 
 class MetaStore:
-    def __init__(self, database_dir):
-        parquet_path = os.path.join(database_dir, 'metadata.parquet')
-        df = pd.DataFrame(columns=['file_path', 'file_id', 'chunk_id', 
-                                        'chunk_text', 'is_indexed', 'index_id', 'custom_metadata'])
+    def __init__(self, db_name="my_documents", metadata_dir="metadata", columns = ['file_path', 'file_id', 'chunk_id', 'chunk_text', 'is_indexed', 'index_id', 'custom_metadata']):
+        metadata_path = os.path.join(metadata_dir, db_name)
+        parquet_path = os.path.join(metadata_path, 'metadata.parquet')
+        
         if os.path.exists(parquet_path):
             # Load existing Parquet file
             df = pd.read_parquet(parquet_path)
         else:
             # Create new Parquet file
+            df = pd.DataFrame(columns)
             df.to_parquet(parquet_path)
 
         self.parquet_path = parquet_path
+        self.metadata_path = metadata_path
         self.df = df
 
-    def add_chunk(self, file_path, file_id, chunk_id, chunk_text):
-        new_row = pd.Series({
-            'file_path': file_path,
-            'file_id': file_id, 
-            'chunk_id': chunk_id,
-            'chunk_text': chunk_text,
-            'is_indexed': False, 
-            'index_id': None,
-        })
-        self.df = self.df.append(new_row, ignore_index=True)
+    def add_chunk(self, chunk_dicts):
+        self.df = self.df.append(chunk_dicts, ignore_index=True)
         self.save()
         
     def mark_indexed(self, chunk_ids, index_ids):
