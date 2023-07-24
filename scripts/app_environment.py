@@ -128,7 +128,7 @@ api_scheme = os.environ.get("API_SCHEME", "http")
 api_base_url = os.environ.get("API_BASE_URL", f"{api_scheme}://{api_host}:{api_port}/api")
 
 EmbeddingModel = text_embeddings.EmbeddingModel(model_name="sentence-transformers/all-MiniLM-L6-v2",load_method='Sentence-Transformers', device="cuda", batch_size=25)
-Faiss_Index = index.Faiss_Index(embeddings=None,shape=EmbeddingModel.embed_text(["Sample"])[0].shape[1], db_name="my_documents", index_dir='index')
+Faiss_Index = index.Faiss_Index(shape=EmbeddingModel.embed_text(["Sample"]).shape[1], db_name="my_documents", index_dir='index')
 Reranker = retriever_reranker.Reranker(model_name="cross-encoder/ms-marco-MiniLM-L-12-v2", device="cuda", batch_size=10)
 Retriever = retriever_reranker.Retriever(Reranker)
 
