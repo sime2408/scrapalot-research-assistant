@@ -7,21 +7,16 @@ class Retriever():
     self.ReRanker = ReRanker
   
   def index_retrieve(self, query, num_results=10, threshold=0.2, meta_fields=['file_path', 'file_id', 'chunk_id', 'chunk_text']):
-    if Faiss_Index!=None:
-        query = EmbeddingModel.embed_text(query)[0]
-        distances, indexes = Faiss_Index.search(query,num_results)
-        data={'distances':[],'indexes':[]}
-        for d,i in zip(distances,indexes):
-          if d>threshold:
-            data['distances'].append(d)
-            data['indexes'].append(d)
-    
-        metadata = MetaStore.get_rows_by_chunk_id(data['indexes'])
-        return [{'distance':d,'index':i,'metadata':m[[meta_fields]]} for d,i,m in zip(data['distances'], data['indexes'], metadata.iterrows())]
-        
-    else:
-        ###TODO Throw an error that tells the user to build or specify and Index
-        return None
+    query = EmbeddingModel.embed_text(query)[0]
+    distances, indexes = Faiss_Index.search(query,num_results)
+    data={'distances':[],'indexes':[]}
+    for d,i in zip(distances,indexes):
+      if d>threshold:
+        data['distances'].append(d)
+        data['indexes'].append(d)
+
+    metadata = MetaStore.get_rows_by_chunk_id(data['indexes'])
+    return [{'distance':d,'index':i,'metadata':m[[meta_fields]]} for d,i,m in zip(data['distances'], data['indexes'], metadata.iterrows())]
 
   def simply_score(passages,query,num_results=5,threshold=0.2, rerank=False):
     #Embed Query and Passages
