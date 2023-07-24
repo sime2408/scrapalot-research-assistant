@@ -34,10 +34,6 @@ class EmbeddingModel():
     sentence_embeddings = token_embeddings.sum(dim=1) / mask.sum(dim=1)[..., None]
     return sentence_embeddings
 
-  def getShape(self):
-      shape = embed_text(["test"])[0].shape()[0]
-      return shape
-
   def getTokenLength(self, passages):
     batches =  [passages[i : i + self.batch_size] for i in range(0, len(passages), self.batch_size)]
     token_lengths = []
