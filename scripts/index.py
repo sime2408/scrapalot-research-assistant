@@ -5,14 +5,14 @@ import pandas as pd
 import pyarrow.parquet as pq
 
 class Faiss_Index:
-    def __init__(self, embeddings, db_name="my_documents", index_dir='index'):
+    def __init__(self, shape=None, db_name="my_documents", index_dir='index'):
         index_path = os.path.join(self.index_dir, self.index_name)
       
         # Check if index already exists
         if os.path.exists(index_path):
             self.index = faiss.read_index(index_path)
         else:
-            index = faiss.IndexFlatL2(embeddings.shape[1])
+            index = faiss.IndexFlatL2(shape)
             index = faiss.IndexIDMap(index_path) 
             faiss.write_index(index, index_path)
         self.index_path = index_path
