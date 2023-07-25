@@ -106,6 +106,7 @@ class LLM:
 ###############################################################################
 # init
 ###############################################################################
+chat_history = []
 llm_manager = LLM()
 executor = ThreadPoolExecutor(max_workers=5)
 
@@ -258,7 +259,7 @@ async def query_files(body: QueryBody, llm=Depends(get_llm)):
 
         qa = await process_database_question(database_name, llm, collection_name, filter_options.filter_document, filter_options.filter_document_name)
 
-        answer, docs = process_query(qa, question, chromadb_get_only_relevant_docs=False, translate_answer=False)
+        answer, docs = process_query(qa, question, chat_history, chromadb_get_only_relevant_docs=False, translate_answer=False)
 
         if translate_a or locale != 'en' and translate_src == 'en':
             answer = GoogleTranslator(source=translate_src, target=locale).translate(answer)

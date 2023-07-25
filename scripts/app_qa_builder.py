@@ -78,7 +78,7 @@ async def process_database_question(database_name, llm, collection_name: Optiona
     return qa
 
 
-def process_query(qa: BaseRetrievalQA, query: str, chromadb_get_only_relevant_docs: bool, translate_answer: bool):
+def process_query(qa: BaseRetrievalQA, query: str, chat_history, chromadb_get_only_relevant_docs: bool, translate_answer: bool):
     try:
 
         if chromadb_get_only_relevant_docs:
@@ -87,9 +87,9 @@ def process_query(qa: BaseRetrievalQA, query: str, chromadb_get_only_relevant_do
 
         if translate_q:
             query_en = GoogleTranslator(source=translate_dst, target=translate_src).translate(query)
-            res = qa({"question": query_en})
+            res = qa({"question": query_en, "chat_history": chat_history})
         else:
-            res = qa({"question": query})
+            res = qa({"question": query, "chat_history": chat_history})
 
         # Print the question
         print(f"\nQuestion: {query}\n")
