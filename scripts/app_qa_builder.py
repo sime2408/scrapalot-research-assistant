@@ -39,7 +39,16 @@ def print_document_chunk(doc):
         exit(0)
 
 
-async def process_database_question(database_name, llm, collection_name: Optional[str], filter_document: bool, filter_document_name: Optional[str]):
+B_INST, E_INST = "[INST]", "[/INST]"
+B_SYS, E_SYS = "<<SYS>>\n", "\n<</SYS>>\n\n"
+DEFAULT_SYSTEM_PROMPT = """\
+    You are a helpful, respectful and honest assistant. Always answer as helpfully as possible, while being safe.
+    Please ensure that you provide an extended answer responses from the following extracted parts of a long document and question.
+    If a question does not make any sense, or is it not possible to construct the answer from the parts, explain why instead of answering something not correct.
+    If you don't know the answer to a question, please don't share false information."""
+
+
+async def process_database_question(database_name, llm, collection_name: Optional[str], filter_document: bool, filter_document_name: Optional[str], sys_prompt=DEFAULT_SYSTEM_PROMPT):
     embeddings_kwargs = {'device': 'cuda'} if gpu_is_enabled else {'device': 'cpu'}
     encode_kwargs = {'normalize_embeddings': False}
     embeddings = OpenAIEmbeddings() if openai_use else HuggingFaceInstructEmbeddings(
@@ -58,21 +67,13 @@ async def process_database_question(database_name, llm, collection_name: Optiona
         search_kwargs["filter"] = {'source': {'$eq': os.path.join('.', 'source_documents', database_name, filter_document_name)}}
 
     retriever = db.as_retriever(search_kwargs=search_kwargs)
-
-    template_llama = """
-    System: You are a helpful, respectful and honest assistant. Always answer as helpfully as possible, while being safe.
-    Please ensure that your responses are socially unbiased and positive in nature.
-    You are given the following extracted parts of a long document and a question.
-    Provide an extended answer which uses context provided as a base.
-    If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct.
-    If you don't know the answer to a question, please don't share false information.
-
+    user_prompt = """
     User: {question}
     =========
     {context}
-    =========
-    Assistant:"""
-    question_prompt = PromptTemplate(template=template_llama, input_variables=["question", "context"])
+    ========="""
+
+    question_prompt = PromptTemplate(template=(B_INST + (B_SYS + sys_prompt + E_SYS) + user_prompt + E_INST), input_variables=["question", "context"])
 
     qa = ConversationalRetrievalChain.from_llm(llm=llm, condense_question_prompt=question_prompt, retriever=retriever, chain_type="stuff", return_source_documents=not args.hide_source)
     return qa
