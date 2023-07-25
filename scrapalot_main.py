@@ -72,7 +72,7 @@ def get_llm_instance(*callback_handler: BaseCallbackHandler):
             n_batch=model_n_batch,
             top_p=model_top_p,
             temp=model_temperature,
-            streaming=False,
+            streaming=True,
             verbose=False
         )
     elif model_type == "llamacpp":
@@ -87,6 +87,7 @@ def get_llm_instance(*callback_handler: BaseCallbackHandler):
             verbose=model_verbose,
             n_gpu_layers=calculate_layer_count() if gpu_is_enabled else None,
             callbacks=callbacks,
+            streaming=True
         )
     elif model_type == "huggingface":
         if huggingface_model_base_name is not None:

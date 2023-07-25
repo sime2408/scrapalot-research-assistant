@@ -1,5 +1,8 @@
 import os
 import textwrap
+from typing import Optional
+from urllib.request import pathname2url
+
 from deep_translator import GoogleTranslator
 from langchain import PromptTemplate
 from langchain.chains import ConversationalRetrievalChain
@@ -7,8 +10,6 @@ from langchain.chains.retrieval_qa.base import BaseRetrievalQA
 from langchain.embeddings import OpenAIEmbeddings, HuggingFaceInstructEmbeddings
 from langchain.vectorstores import Chroma
 from openai.error import AuthenticationError
-from typing import Optional
-from urllib.request import pathname2url
 
 from .app_environment import translate_dst, translate_src, translate_docs, translate_q, ingest_target_source_chunks, args, openai_use, ingest_embeddings_model, gpu_is_enabled, \
     chromaDB_manager
@@ -77,7 +78,7 @@ async def process_database_question(database_name, llm, collection_name: Optiona
     return qa
 
 
-def process_query(qa: BaseRetrievalQA, query: str, chat_history, chromadb_get_only_relevant_docs: bool, translate_answer: bool):
+def process_query(qa: BaseRetrievalQA, query: str, chromadb_get_only_relevant_docs: bool, translate_answer: bool):
     try:
 
         if chromadb_get_only_relevant_docs:
@@ -86,9 +87,9 @@ def process_query(qa: BaseRetrievalQA, query: str, chat_history, chromadb_get_on
 
         if translate_q:
             query_en = GoogleTranslator(source=translate_dst, target=translate_src).translate(query)
-            res = qa({"question": query_en, "chat_history": chat_history})
+            res = qa({"question": query_en})
         else:
-            res = qa({"question": query, "chat_history": chat_history})
+            res = qa({"question": query})
 
         # Print the question
         print(f"\nQuestion: {query}\n")
