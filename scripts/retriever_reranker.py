@@ -1,11 +1,13 @@
 import torch
 import numpy as np
-from .app_environment import EmbeddingModel, MetaStore, Faiss_Index
 
 class Retriever():
-  def __init__(self,ReRanker=None):
+  def __init__(self,ReRanker=None,EmbeddingModel=None, MetaStore=None, Faiss_Index=None,batch_size=10):
     self.ReRanker = ReRanker
-  
+    self.EmbeddingModel = EmbeddingModel
+    self.MetaStore = MetaStore
+    self.Faiss_Index = Faiss_Index
+
   def index_retrieve(self, query, num_results=10, threshold=0.2, meta_fields=['file_path', 'file_id', 'chunk_id', 'chunk_text']):
     query = EmbeddingModel.embed_text(query)[0]
     distances, indexes = Faiss_Index.search(query,num_results)
