@@ -133,6 +133,7 @@ def get_llm_instance(*callback_handler: BaseCallbackHandler):
             model=model,
             tokenizer=tokenizer,
             max_length=model_n_ctx,
+            max_new_tokens=model_n_ctx,
             temperature=model_temperature,
             top_p=model_top_p,
             repetition_penalty=1.15,
