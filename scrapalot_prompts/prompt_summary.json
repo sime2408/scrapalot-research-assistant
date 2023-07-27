@@ -1,0 +1,11 @@
+{
+    "input_variables": [
+        "text"
+    ],
+    "output_parser": null,
+    "partial_variables": {},
+    "template": "Please give me a short summary of:\n{text}\n",
+    "template_format": "f-string",
+    "validate_template": true,
+    "_type": "prompt"
+}
