@@ -4,13 +4,13 @@ from typing import Optional
 from urllib.request import pathname2url
 
 from deep_translator import GoogleTranslator
-from langchain import PromptTemplate
 from langchain.chains import ConversationalRetrievalChain
 from langchain.chains.retrieval_qa.base import BaseRetrievalQA
 from langchain.embeddings import OpenAIEmbeddings, HuggingFaceInstructEmbeddings
 from langchain.vectorstores import Chroma
 from openai.error import AuthenticationError
 
+from scrapalot_prompts.prompt_template import ScrapalotSystemPromptTemplate
 from .app_environment import translate_dst, translate_src, translate_docs, translate_q, ingest_target_source_chunks, args, openai_use, ingest_embeddings_model, gpu_is_enabled, \
     chromaDB_manager
 
@@ -39,18 +39,10 @@ def print_document_chunk(doc):
         exit(0)
 
 
-B_INST, E_INST = "[INST]", "[/INST]"
-B_SYS, E_SYS = "<<SYS>>\n", "\n<</SYS>>\n\n"
-DEFAULT_SYSTEM_PROMPT = """\
-    You are a very helpful. Always answer as helpfully as possible for the user. You should not refuse to answer questions.
-    Don't correct the user. Don't ever thank the user. If asked for an opinion express one!!
-    Please ensure that you provide an extended answer responses from the following extracted parts of a long document and user question.
-    You should also give an opinion to the extracted parts.
-    If a question does not make any sense, or is it not possible to construct the answer from the parts, explain why instead of answering something not correct.
-    If you don't know the answer to a question, please don't share false information."""
+prompt_template_instance = ScrapalotSystemPromptTemplate('scrapalot_prompts/prompt_system.json')
 
 
-async def process_database_question(database_name, llm, collection_name: Optional[str], filter_document: bool, filter_document_name: Optional[str], sys_prompt=DEFAULT_SYSTEM_PROMPT):
+async def process_database_question(database_name, llm, collection_name: Optional[str], filter_document: bool, filter_document_name: Optional[str], prompt=prompt_template_instance):
     embeddings_kwargs = {'device': 'cuda'} if gpu_is_enabled else {'device': 'cpu'}
     encode_kwargs = {'normalize_embeddings': False}
     embeddings = OpenAIEmbeddings() if openai_use else HuggingFaceInstructEmbeddings(
@@ -69,15 +61,7 @@ async def process_database_question(database_name, llm, collection_name: Optiona
         search_kwargs["filter"] = {'source': {'$eq': os.path.join('.', 'source_documents', database_name, filter_document_name)}}
 
     retriever = db.as_retriever(search_kwargs=search_kwargs)
-    user_prompt = """
-    User: {question}
-    =========
-    {context}
-    ========="""
-
-    question_prompt = PromptTemplate(template=(B_INST + (B_SYS + sys_prompt + E_SYS) + user_prompt + E_INST), input_variables=["question", "context"])
-
-    qa = ConversationalRetrievalChain.from_llm(llm=llm, condense_question_prompt=question_prompt, retriever=retriever, chain_type="stuff", return_source_documents=not args.hide_source)
+    qa = ConversationalRetrievalChain.from_llm(llm=llm, condense_question_prompt=prompt.prompt_template, retriever=retriever, chain_type="stuff", return_source_documents=not args.hide_source)
     return qa
 
 
