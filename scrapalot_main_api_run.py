@@ -1,6 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
 
-import os
+import os, glob, copy
 import subprocess
 import sys
 import uuid
@@ -17,12 +17,21 @@ from typing import List, Optional, Union, Tuple
 from urllib.parse import unquote
 
 from scrapalot_main import get_llm_instance
-from scripts.app_environment import translate_src, translate_q, chromaDB_manager, translate_a, api_host, api_port, api_scheme
+from scripts.app_environment import translate_src, translate_q, translate_a, api_host, api_port, api_scheme
+from scripts.app_environment import collection_name,ingest_persist_directory,emb_load_method,embeddings_model,device,rbs,ebs
+from scripts import text_embeddings, index, retriever_reranker
 from scripts.app_qa_builder import process_database_question, process_query
 
 sys.path.append(str(Path(sys.argv[0]).resolve().parent.parent))
 
 app = FastAPI(title="scrapalot-chat API")
+
+app.state.collection_name = collection_name
+app.state.ingest_persist_directory = ingest_persist_directory
+app.state.emb_load_method = emb_load_method
+app.state.ingest_embeddings_model = embeddings_model
+app.state.rbs = rbs
+app.state.ebs = ebs
 
 origins = [
     "http://localhost:3000", "http://localhost:8000", "https://scrapalot.com"
@@ -114,30 +123,43 @@ executor = ThreadPoolExecutor(max_workers=5)
 @app.on_event("startup")
 async def startup_event():
     llm_manager.get_instance()
+    get_models_databases()
 
 
 ###############################################################################
 # helper functions
 ###############################################################################
 
+def get_models_databases():
+  #Get App State Configs
+  collection_name = app.state.collection_name
+  ingest_persist_directory = app.state.ingest_persist_directory
+  mb_load_method = app.state.emb_load_method
+  embeddings_model = app.state.ingest_embeddings_model
+  device = app.state.device
+  rbs = app.state.rbs
+  ebs = app.state.ebs
+
+  #Set Models and Databases
+  app.state.MetaStore = index.MetaStore(collection_name=collection_name, db_dir=ingest_persist_directory)
+  app.state.Faiss_Index = index.Faiss_Index(shape=EmbeddingModel.embed_text(["Sample"])[0].shape[0], collection_name=collection_name, db_dir=ingest_persist_directory)
+  app.state.EmbeddingModel = text_embeddings.EmbeddingModel(model_name=ingest_embeddings_model,load_method=emb_load_method, device=device, batch_size=ebs)
+  app.state.ReRanker = retriever_reranker.ReRanker(model_name=retriever_model, batch_size=rbs)
+  app.state.Retriever = retriever_reranker.Retriever(ReRanker=ReRanker,EmbeddingModel=EmbeddingModel,Faiss_Index=Faiss_Index, MetaStore=MetaStore)
+
 def get_llm():
     return llm_manager.get_instance()
 
+def list_of_collections(collection_name, ingest_persist_directory):
+    return [os.path.basename(x).replace(".index","") for x in glob.glob(app.state.ingest_persist_directory+"/*/*.index")] 
 
-def list_of_collections(database_name: str):
-    client = chromaDB_manager.get_client(database_name)
-    return client.list_collections()
-
-
-def create_database(database_name):
-    directory_path = os.path.join(".", "source_documents", database_name);
-    db_path = f"./db/{database_name}"
-    os.makedirs(directory_path)
-    os.makedirs(db_path)
-    set_key('.env', 'INGEST_SOURCE_DIRECTORY', directory_path)
-    set_key('.env', 'INGEST_PERSIST_DIRECTORY', db_path)
+def create_database(database_name,ingest_persist_directory):
+    directory_path = os.path.join(".", "source_documents", database_name)
+    app.state.database_name = database_name
+    app.state.ingest_persist_directory = ingest_persist_directory
+    get_models_databases()
     print(f"Created new database: {directory_path}")
-    return directory_path, db_path
+    return directory_path
 
 
 async def get_files_from_dir(database: str, page: int, items_per_page: int) -> Tuple[List[SourceDirectoryFile], int]:
@@ -153,14 +175,37 @@ async def get_files_from_dir(database: str, page: int, items_per_page: int) -> T
 
 
 def run_ingest(database_name: str, collection_name: Optional[str] = None):
-    if database_name and not collection_name:
-        subprocess.run(["python", "scrapalot_ingest.py",
-                        "--ingest-dbname", database_name], check=True)
-    if database_name and collection_name:
-        subprocess.run(["python", "scrapalot_ingest.py",
-                        "--ingest-dbname", database_name, "--collection", collection_name], check=True)
+    #Setup Collection
+    EmbeddingModel = app.state.EmbeddingModel
+    Faiss_Index = app.state.Faiss_Index
+    MetaStore =  app.state.MetaStore
 
+    #Load and parse documents
+    documents = load_documents(ingest_source_directory, collection_name if ingest_source_directory != collection_name else None, [])
+    texts = EmbeddingModel.split_by_token(documents)
 
+    #Parse Metadata
+    metadata = [text.metadata for text in texts]
+    for i,meta in enumerate(metadata):
+      meta['text'] = copy.deepcopy(texts[i].page_content)
+      #Generate unique hash/id for each chunk using metadata
+      id_columns = meta['source'],meta['text'][:10],meta['text'][-10:]
+      id = int(hashlib.md5("".join(id_columns).encode()).hexdigest(), 16)
+      meta['chunk_id'] = str(id)[:10]
+
+    #Declares metadata not already in MetaStore
+    new_metadata = [meta for meta in metadata if not meta['chunk_id'] in list(MetaStore.df['chunk_id'])]
+
+    if len(new_metadata)>0:
+      MetaStore.add_chunk(new_metadata)
+      #Add embeddings dd to Faiss Index
+      embeddings = EmbeddingModel.embed_text([new_meta['text'] for new_meta in new_metadata])
+      #Assigns row indexes to most recently added indexes
+      start = len(MetaStore.df)-len(new_metadata)
+      rows = list(range(start,len(MetaStore.df)))
+      #Adds Embeddings to Faiss_Index while setting indexed = True in MetaStore for the new rows 
+      Faiss_Index.add(np.array(embeddings),rows,MetaStore)
+        
 async def get_database_file_response(absolute_file_path: str) -> Union[FileResponse]:
     return FileResponse(absolute_file_path)
 
@@ -175,24 +220,11 @@ async def root():
 
 @app.get('/api/databases')
 async def get_database_names_and_collections():
-    base_dir = "./db"
     try:
-        database_names = \
-            sorted([name for name in os.listdir(base_dir)
-                    if os.path.isdir(os.path.join(base_dir, name))])
-
-        database_info = []
-        for database_name in database_names:
-            collections = list_of_collections(database_name)
-            database_info.append({
-                'database_name': database_name,
-                'collections': collections
-            })
-
+        database_info = list_of_collections()
         return database_info
     except Exception as e:
         return HTTPException(status_code=500, detail=str(e))
-
 
 @app.post("/api/database/{database_name}/new")
 async def create_new_database(database_name: str):
@@ -214,7 +246,7 @@ async def get_database_files(database_name: str, page: int = Query(1, ge=1), ite
     files, total_count = await get_files_from_dir(database_dir, page, items_per_page)
     return {"total_count": total_count, "items": files}
 
-
+#TODO
 @app.get("/api/database/{database_name}/collection/{collection_name}", response_model=List[SourceDirectoryFile])
 async def get_database_collection_files(database_name: str, collection_name: str, page: int = Query(1, ge=1), items_per_page: int = Query(10, ge=1)):
     base_dir = os.path.join(".", "source_documents")
@@ -225,7 +257,7 @@ async def get_database_collection_files(database_name: str, collection_name: str
     files = await get_files_from_dir(collection_dir, page, items_per_page)
     return files
 
-
+#TODO
 @app.get("/api/database/{database_name}/file/{file_name}", response_model=None)
 async def get_database_file(database_name: str, file_name: str) -> Union[HTMLResponse, FileResponse]:
     base_dir = os.path.join(".", "source_documents")
@@ -240,7 +272,7 @@ async def get_database_file(database_name: str, file_name: str) -> Union[HTMLRes
 
     return await get_database_file_response(absolute_file_path)
 
-
+#TODO
 @app.post('/api/query')
 async def query_files(body: QueryBody, llm=Depends(get_llm)):
     database_name = body.database_name
