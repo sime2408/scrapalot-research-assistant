@@ -3,11 +3,9 @@ import multiprocessing
 import os
 import pathlib
 
-import chromadb
 import torch
-from chromadb import Settings
 from dotenv import load_dotenv
-from . import text_embeddings, index, retriever_reranker
+
 ######################################################################
 # General env calculations
 ######################################################################
@@ -90,6 +88,13 @@ model_use_mlock = os.environ.get("MODEL_USE_MLOCK", "true") == "true"
 model_verbose = os.environ.get("MODEL_VERBOSE", "false") == "true"
 model_top_p = float(os.environ.get("MODEL_TOP_P", "0.9"))
 model_n_batch = int(os.environ.get('MODEL_N_BATCH', "1024"))
+collection_name = os.environ.get("COLLECTION_NAME","my_documents")
+device = "cpu"
+embeddings_model = os.environ.get("INGEST_EMBEDDINGS_MODEL","sentence-transformers/all-MiniLM-L6-v2")
+emb_load_method = os.environ.get("EMBEDDING_LOADER","Sentence-Transformers")
+ebs = int(os.environ.get("RETRIEVER_BATCH_SIZE","25"))
+reranker_model = os.environ.get("RETRIEVER_MODEL","cross-encoder/ms-marco-MiniLM-L-12-v2")
+rbs = int(os.environ.get("EMBEDDER_BATCH_SIZE","10"))
 
 # Settings specific for LLAMA
 model_path_or_id = os.environ.get("MODEL_ID_OR_PATH")
@@ -126,12 +131,6 @@ api_host = os.environ.get("API_HOST", "0.0.0.0")
 api_port = int(os.environ.get("API_PORT", "8000"))
 api_scheme = os.environ.get("API_SCHEME", "http")
 api_base_url = os.environ.get("API_BASE_URL", f"{api_scheme}://{api_host}:{api_port}/api")
-
-EmbeddingModel = text_embeddings.EmbeddingModel(model_name="sentence-transformers/all-MiniLM-L6-v2",load_method='Sentence-Transformers', device="cuda", batch_size=25)
-Faiss_Index = index.Faiss_Index(shape=EmbeddingModel.embed_text(["Sample"])[0].shape[0], db_name="my_documents", db_dir='db')
-MetaStore = index.MetaStore(db_name="my_documents", db_dir="metadata")
-ReRanker = retriever_reranker.ReRanker(model_name="cross-encoder/ms-marco-MiniLM-L-12-v2", device="cuda", batch_size=10)
-Retriever = retriever_reranker.Retriever(ReRanker=ReRanker,EmbeddingModel=EmbeddingModel,Faiss_Index=Faiss_Index, MetaStore=MetaStore)
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
