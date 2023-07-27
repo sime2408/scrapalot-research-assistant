@@ -11,6 +11,9 @@ from langchain.document_loaders import (
 )
 from langchain.schema import Document
 
+from ingestion_storage.app_storage import AbstractStorage
+from ingestion_storage.app_storage_google_drive import GoogleDriveStorage
+
 
 def print_platform_version():
     """
@@ -34,9 +37,10 @@ LOADER_MAPPING = {
 }
 
 
-def load_single_document(file_path: str) -> List[Document]:
+def load_single_document(storage: AbstractStorage, file_path: str) -> List[Document]:
     """
     The function takes a single file and loads its data using the appropriate loader based on its extension.
+    :param storage: The storage instance (local or Google Drive)
     :param file_path: The path of the file to load.
     :return: A list of Document objects loaded from the file.
     """
@@ -44,7 +48,15 @@ def load_single_document(file_path: str) -> List[Document]:
     if ext in LOADER_MAPPING:
         try:
             loader_class, loader_args = LOADER_MAPPING[ext]
-            loader = loader_class(file_path, **loader_args)
+            # If the storage is Google Drive, download the file first
+            if isinstance(storage, GoogleDriveStorage):
+                file_path_remote = storage.get_file_path(file_path)
+                loader = loader_class(file_path_remote, **loader_args)
+                file = loader.load()
+                os.remove(file_path_remote)
+                return file
+            else:  # For local storage, just open the file
+                loader = loader_class(file_path, **loader_args)
             return loader.load()
         except Exception as e:
             raise ValueError(f"Problem with document {file_path}: \n'{e}'")
@@ -64,7 +76,7 @@ def display_source_directories(folder: str) -> list[str]:
     return sorted((f for f in os.listdir(f"./{folder}") if not f.startswith(".")), key=str.lower)
 
 
-def display_directories():
+def display_directories(chosen_storage: AbstractStorage):
     """
     This function displays the list of existing directories in the parent directory.
     It also explores one level of subdirectories for each directory.
@@ -74,14 +86,14 @@ def display_directories():
     directories = []
 
     # Fetch directories and their direct subdirectories
-    sorted_list = sorted(os.listdir(base_dir))
+    sorted_list = sorted(chosen_storage.list_dirs_src(base_dir))
     for dir_name in sorted_list:
         if not dir_name.startswith("."):
             dir_path = os.path.join(base_dir, dir_name)
 
-            if os.path.isdir(dir_path):
+            if chosen_storage.is_directory(dir_path):
                 directories.append(dir_name)
-                subdirectories = [f"{dir_name}/{sub_dir}" for sub_dir in sorted(os.listdir(dir_path)) if os.path.isdir(os.path.join(dir_path, sub_dir))]
+                subdirectories = [f"{dir_name}/{sub_dir}" for sub_dir in sorted(chosen_storage.list_dirs_src(dir_path)) if chosen_storage.is_directory(os.path.join(dir_path, sub_dir))]
                 directories.extend(subdirectories)
 
     cli_column_number = 4  # Number of columns to be displayed

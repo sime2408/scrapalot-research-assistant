@@ -72,6 +72,8 @@ load_dotenv()
 
 os_running_environment = os.environ.get('OS_RUNNING_ENVIRONMENT', "windows")
 
+# Define the storage type (local_storage, google_drive_storage, google_cloud_storage, s3_bucket_storage)
+ingest_storage_type = os.environ.get('INGEST_STORAGE_TYPE', 'local_storage')
 # Define the folder for storing database
 ingest_persist_directory = os.environ.get('INGEST_PERSIST_DIRECTORY', 'db')
 

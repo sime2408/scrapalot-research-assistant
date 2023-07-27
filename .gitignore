@@ -94,3 +94,6 @@ venv.bak/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 /.idea/
 /scrapalot-research-assistant.iml
+
+# Google Drive Secret
+/client_secrets.json

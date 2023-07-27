@@ -32,6 +32,7 @@ and edit the variables appropriately in the `.env` file.
 ```ini
 OS_RUNNING_ENVIRONMENT: Operating system your application is running on.
 
+INGEST_STORAGE_TYPE: the type of storage to store documents and the database (local_storage, google_drive_storage, google_cloud_storage, s3_bucket_storage)
 INGEST_PERSIST_DIRECTORY: is the folder you want your vectorstore in
 INGEST_SOURCE_DIRECTORY: from where books will be parsed
 INGEST_EMBEDDINGS_MODEL: SentenceTransformers embeddings model name (see https://www.sbert.net/docs/pretrained_models.html)
@@ -113,6 +114,8 @@ pip3 install -r requirements.txt
 ```
 
 # Ingesting data to the database
+## Choosing the data storage
+### Local
 
 First you need to ingest some data to the `db` database folder by performing vectorstore embeddings.
 Your `source_documents` will be shown in 4 columns listed, so you can choose which database to ingest.
@@ -128,6 +131,32 @@ variable in the `.env` file.
 This will create database embeddings:
 
 ![Ingest created](img/UI-ingest_db.png)
+
+### Google drive
+Google Drive connection requires secret file called `client_secrets.json` to authenticate the user.
+This file should contain the OAuth 2.0 client ID and client secret that your application
+uses when requesting an access token from the Google OAuth 2.0 Authorization Server.
+
+Here are the steps you need to follow to get this file:
+
+* Go to the Google Cloud Console: https://console.cloud.google.com/
+* Create a new project called `scrapalot-research-assistant` or select an existing one.
+* Go to the "Credentials" page in the "APIs & Services" section.
+* Click "Create Credentials" and select "OAuth client ID."
+* Configure the OAuth consent screen as necessary. You'll need to set the "Application type" to "Desktop app."
+* Click "Create" to create the OAuth 2.0 client ID.
+* Click the download button on the right side of your newly created OAuth 2.0 client ID. This will download a JSON file.
+* Rename the downloaded JSON file to `client_secrets.json` and place it in the root directory of this project.
+
+Please note that this `client_secrets.json` file contains sensitive information that could
+allow others to impersonate your application, so you should not share it or check it into version control.
+
+To enable Google Drive service, you need to follow these steps:
+
+* Visit the URL, something like https://console.developers.google.com/apis/api/drive.googleapis.com/overview?project=scrapalot-research-assistant.
+* If you're not already signed in to your Google account, you'll be asked to sign in.
+* Once you're signed in, you should be taken to the dashboard for your project.
+* Click on the "Enable" button to enable the Google Drive API for your project.
 
 # QA application
 
