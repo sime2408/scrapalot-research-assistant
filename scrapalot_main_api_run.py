@@ -7,6 +7,7 @@ import uuid
 from deep_translator import GoogleTranslator
 from dotenv import load_dotenv, set_key
 from fastapi import FastAPI, Depends, HTTPException, Query, Request
+from langchain.agents import load_tools, initialize_agent, AgentType
 from langchain.callbacks import StreamingStdOutCallbackHandler
 from pathlib import Path
 from pydantic import BaseModel, root_validator, Field
@@ -60,12 +61,17 @@ class QueryBodyFilter(BaseModel):
         return values
 
 
-class QueryBody(BaseModel):
+class QueryLLMBody(BaseModel):
     database_name: str
     collection_name: str
     question: str
     locale: str
     filter_options: QueryBodyFilter
+
+
+class QueryWiki(BaseModel):
+    question: str
+    locale: str
 
 
 class TranslationBody(BaseModel):
@@ -241,8 +247,8 @@ async def get_database_file(database_name: str, file_name: str) -> Union[HTMLRes
     return await get_database_file_response(absolute_file_path)
 
 
-@app.post('/api/query')
-async def query_files(body: QueryBody, llm=Depends(get_llm)):
+@app.post('/api/query-llm')
+async def query_files(body: QueryLLMBody, llm=Depends(get_llm)):
     database_name = body.database_name
     collection_name = body.collection_name
     question = body.question
@@ -284,6 +290,23 @@ async def query_files(body: QueryBody, llm=Depends(get_llm)):
             'answer': answer,
             'source_documents': source_documents
         }
+        return response
+    except Exception as e:
+        return HTTPException(status_code=500, detail=str(e))
+
+
+@app.post('/api/query-wiki')
+async def query_wiki(body: QueryWiki, llm=Depends(get_llm)):
+    try:
+        tools = load_tools(["wikipedia"], llm=llm)
+        agent = initialize_agent(tools, llm, agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION, verbose=False)
+
+        result = agent.run({'input': body.question, 'chat_history': []})
+
+        response = {
+            'answer': result,
+        }
+
         return response
     except Exception as e:
         return HTTPException(status_code=500, detail=str(e))

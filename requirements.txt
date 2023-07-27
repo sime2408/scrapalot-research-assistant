@@ -33,3 +33,4 @@ python-multipart==0.0.6
 psutil==5.9.5; sys_platform != 'darwin'
 comtypes==1.2.0; sys_platform == 'linux' or sys_platform == 'linux2'  or sys_platform == 'linux3'
 beautifulsoup4==4.12.2
+wikipedia==1.4.0
