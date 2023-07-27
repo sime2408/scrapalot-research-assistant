@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-
+from sklearn.metrics import pairwise
 class Retriever():
   def __init__(self,ReRanker=None,EmbeddingModel=None, MetaStore=None, Faiss_Index=None,batch_size=10):
     self.ReRanker = ReRanker
@@ -8,25 +8,29 @@ class Retriever():
     self.MetaStore = MetaStore
     self.Faiss_Index = Faiss_Index
 
-  def index_retrieve(self, query, num_results=10, threshold=0.2, meta_fields=['file_path', 'file_id', 'chunk_id', 'chunk_text']):
-    query = EmbeddingModel.embed_text(query)[0]
-    distances, indexes = Faiss_Index.search(query,num_results)
+  def index_retrieve(self, query, num_results=10, threshold=0.2, fields=[]):
+    if fields==[]: fields=list(self.MetaStore.df.columns)
+    query = self.EmbeddingModel.embed_text([query])
+    distances, indexes = self.Faiss_Index.search(query=query,k=num_results)
     data={'distances':[],'indexes':[]}
-    for d,i in zip(distances,indexes):
-      if d>threshold:
+    for d,i in zip(distances[0],indexes[0]):
+      if d>0.3:
         data['distances'].append(d)
-        data['indexes'].append(d)
-
-    metadata = MetaStore.get_rows_by_chunk_id(data['indexes'])
-    return [{'distance':d,'index':i,'metadata':m[[meta_fields]]} for d,i,m in zip(data['distances'], data['indexes'], metadata.iterrows())]
+        data['indexes'].append(i)
+    #Order from high to low
+    data['distances'].reverse()
+    data['indexes'].reverse()
+    #Get Metadata
+    metadata = self.MetaStore.get_rows_by_chunk_id(data['indexes'])
+    return [{'distance':d,'index':i,'metadata':m[1][fields],'collection_name':self.MetaStore.collection_name} for d,i,m in zip(data['distances'], data['indexes'], metadata.iterrows())]
 
   def simply_score(passages,query,num_results=5,threshold=0.2, rerank=False):
     #Embed Query and Passages
-    passage_embeddings = EmbeddingModel.embed_text(passages)
-    query_embedding = EmbeddingModel.embed_text(query)[0]
+    passage_embeddings = self.EmbeddingModel.embed_text(passages)
+    query_embedding = self.EmbeddingModel.embed_text([query])[0]
 
     #Calculate simple cosine similarity
-    similarities = cosine_similarity(query_embedding,passage_embeddings)[0]
+    similarities = pairwise.cosine_similarity(query_embedding,passage_embeddings)[0]
     sim_scores_argsort = reversed(np.argsort(similarities))
 
     #Store results>threshold in dict
@@ -56,12 +60,11 @@ class ReRanker():
     self.batch_size = batch_size
 
   def rerank(self, passages,query,n_results,threshold=0.3):
-    model = self.model
-    batches =  [data[i : i + self.batch_size] for i in range(0, len(text), self.batch_size)]
+    batches =  [passages[i : i + self.batch_size] for i in range(0, len(text), self.batch_size)]
     scores=[]
     for batch in batches:
       model_inputs = [[query, passage] for passage in batch]
-      b_scores = model.predict(model_inputs)
+      b_scores = self.model.predict(model_inputs)
       scores.append(b_scores)
 
     #Sort the scores in decreasing order
