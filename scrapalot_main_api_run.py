@@ -21,7 +21,7 @@ from starlette.responses import FileResponse, HTMLResponse
 from starlette.staticfiles import StaticFiles
 
 from scrapalot_main import get_llm_instance
-from scripts.app_environment import translate_src, translate_q, chromaDB_manager, translate_a, api_host, api_port, api_scheme
+from scripts.app_environment import chromaDB_manager, api_host, api_port, api_scheme
 from scripts.app_qa_builder import process_database_question, process_query
 
 sys.path.append(str(Path(sys.argv[0]).resolve().parent.parent))
@@ -311,23 +311,20 @@ async def query_files(body: QueryLLMBody, llm=Depends(get_llm)):
     translate_chunks = filter_options.translate_chunks
 
     try:
-        if translate_q:
-            question = GoogleTranslator(source=locale, target=translate_src).translate(question)
-
-        seeking_from = database_name + '/' + collection_name if collection_name and collection_name != database_name else database_name
-        print(f"\n\033[94mSeeking for answer from: [{seeking_from}]. May take some minutes...\033[0m")
+        if locale != 'en':
+            question = GoogleTranslator(source=locale, target='en').translate(question)
 
         qa = await process_database_question(database_name, llm, collection_name, filter_options.filter_document, filter_options.filter_document_name)
 
         answer, docs = process_query(qa, question, chat_history, chromadb_get_only_relevant_docs=False, translate_answer=False)
 
-        if translate_a or locale != 'en' and translate_src == 'en':
-            answer = GoogleTranslator(source=translate_src, target=locale).translate(answer)
+        if locale != 'en':
+            answer = GoogleTranslator(source='en', target=locale).translate(answer)
 
         source_documents = []
         for doc in docs:
             if translate_chunks:
-                doc.page_content = GoogleTranslator(source=translate_src, target=locale).translate(doc.page_content)
+                doc.page_content = GoogleTranslator(source='en', target=locale).translate(doc.page_content)
 
             document_data = {
                 'content': doc.page_content,
@@ -351,8 +348,17 @@ async def query_files(body: QueryLLMBody, llm=Depends(get_llm)):
 
 @app.post('/api/query-web')
 async def query_web(body: QueryWiki, agent=Depends(get_agent)):
+    question = body.question
+    locale = body.locale
     try:
-        result = agent.run(body.question)
+
+        if locale != 'en':
+            question = GoogleTranslator(source=locale, target='en').translate(question)
+
+        result = agent.run(question)
+
+        if locale != 'en':
+            result = GoogleTranslator(source='en', target=locale).translate(result)
 
         response = {
             'answer': result,
