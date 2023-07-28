@@ -1,21 +1,21 @@
-from concurrent.futures import ThreadPoolExecutor
-
 import os
 import subprocess
 import sys
 import uuid
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+from typing import List, Optional, Union, Tuple
+from urllib.parse import unquote
+
 from deep_translator import GoogleTranslator
 from dotenv import load_dotenv, set_key
 from fastapi import FastAPI, Depends, HTTPException, Query, Request
 from langchain.agents import load_tools, initialize_agent, AgentType
 from langchain.callbacks import StreamingStdOutCallbackHandler
-from pathlib import Path
 from pydantic import BaseModel, root_validator, Field
 from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import FileResponse, HTMLResponse
 from starlette.staticfiles import StaticFiles
-from typing import List, Optional, Union, Tuple
-from urllib.parse import unquote
 
 from scrapalot_main import get_llm_instance
 from scripts.app_environment import translate_src, translate_q, chromaDB_manager, translate_a, api_host, api_port, api_scheme
@@ -295,7 +295,7 @@ async def query_files(body: QueryLLMBody, llm=Depends(get_llm)):
         return HTTPException(status_code=500, detail=str(e))
 
 
-@app.post('/api/query-wiki')
+@app.post('/api/query-web')
 async def query_wiki(body: QueryWiki, llm=Depends(get_llm)):
     try:
         tools = load_tools(["wikipedia"], llm=llm)
