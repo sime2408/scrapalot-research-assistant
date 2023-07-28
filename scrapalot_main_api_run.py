@@ -72,7 +72,7 @@ class QueryLLMBody(BaseModel):
     filter_options: QueryBodyFilter
 
 
-class QueryWiki(BaseModel):
+class QueryWeb(BaseModel):
     question: str
     locale: str
 
@@ -144,6 +144,8 @@ class WebSearch:
             agent=self.react.agent,
             tools=self.tools,
             verbose=True,
+            return_intermediate_steps=True,
+            early_stopping_method="generate",
         )
 
     def get_tools(self):
@@ -347,7 +349,7 @@ async def query_files(body: QueryLLMBody, llm=Depends(get_llm)):
 
 
 @app.post('/api/query-web')
-async def query_web(body: QueryWiki, agent=Depends(get_agent)):
+async def query_web(body: QueryWeb, agent=Depends(get_agent)):
     question = body.question
     locale = body.locale
     try:
@@ -355,13 +357,23 @@ async def query_web(body: QueryWiki, agent=Depends(get_agent)):
         if locale != 'en':
             question = GoogleTranslator(source=locale, target='en').translate(question)
 
-        result = agent.run(question)
+        result = agent({"input": question})
+        observations = []
+        for step in result["intermediate_steps"]:
+            observations.append(step)
 
+        source_documents = []
+        for doc in observations:
+            content = doc[1]
+            source_documents.append({"content": content, "link": ""})
+
+        answer = result["output"]
         if locale != 'en':
-            result = GoogleTranslator(source='en', target=locale).translate(result)
+            answer = GoogleTranslator(source='en', target=locale).translate(answer)
 
         response = {
-            'answer': result,
+            'answer': answer,
+            'source_documents': source_documents
         }
 
         return response
