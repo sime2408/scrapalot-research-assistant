@@ -10,8 +10,11 @@ from urllib.parse import unquote
 from deep_translator import GoogleTranslator
 from dotenv import load_dotenv, set_key
 from fastapi import FastAPI, Depends, HTTPException, Query, Request
-from langchain.agents import load_tools, initialize_agent, AgentType
+from langchain.agents import initialize_agent, AgentType, AgentExecutor
+from langchain.agents.react.base import DocstoreExplorer
 from langchain.callbacks import StreamingStdOutCallbackHandler
+from langchain.docstore.wikipedia import Wikipedia
+from langchain.tools import Tool, DuckDuckGoSearchRun
 from pydantic import BaseModel, root_validator, Field
 from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import FileResponse, HTMLResponse
@@ -109,6 +112,48 @@ class LLM:
         return self.instance
 
 
+class WebSearch:
+    def __init__(self):
+        self.tools = None
+        self.react = None
+        self.search = None
+
+    def initialize(self, llm):
+        doc_store = DocstoreExplorer(Wikipedia())
+        duckduckgo_search = DuckDuckGoSearchRun()
+        self.tools = [
+            Tool(
+                name="Search",
+                func=doc_store.search,
+                description="Search for a term in the doc store.",
+            ),
+            Tool(
+                name="Lookup",
+                func=doc_store.lookup,
+                description="Lookup a term in the doc store.",
+            ),
+            Tool(
+                name='DuckDuckGo Search',
+                func=duckduckgo_search.run,
+                description="Useful for when you need to do a search on the internet to find information that another tool can't find. Be specific with your input."
+            ),
+        ]
+
+        self.react = initialize_agent(self.tools, llm, agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION)
+        self.search = AgentExecutor.from_agent_and_tools(
+            agent=self.react.agent,
+            tools=self.tools,
+            verbose=True,
+        )
+
+    def get_tools(self):
+        return self.tools
+
+    def get_web_search(self):
+        return self.search  # returning search, which is an instance of AgentExecutor
+
+
+web_search = WebSearch()
 ###############################################################################
 # init
 ###############################################################################
@@ -119,7 +164,16 @@ executor = ThreadPoolExecutor(max_workers=5)
 
 @app.on_event("startup")
 async def startup_event():
-    llm_manager.get_instance()
+    llm = llm_manager.get_instance()
+    web_search.initialize(llm)
+
+
+def get_tools():
+    return web_search.get_tools()
+
+
+def get_agent():
+    return web_search.get_web_search()
 
 
 ###############################################################################
@@ -296,12 +350,9 @@ async def query_files(body: QueryLLMBody, llm=Depends(get_llm)):
 
 
 @app.post('/api/query-web')
-async def query_wiki(body: QueryWiki, llm=Depends(get_llm)):
+async def query_web(body: QueryWiki, agent=Depends(get_agent)):
     try:
-        tools = load_tools(["wikipedia"], llm=llm)
-        agent = initialize_agent(tools, llm, agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION, verbose=False)
-
-        result = agent.run({'input': body.question, 'chat_history': []})
+        result = agent.run(body.question)
 
         response = {
             'answer': result,
