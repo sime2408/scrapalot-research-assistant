@@ -253,7 +253,7 @@ async def get_database_names_and_collections():
 
         return database_info
     except Exception as e:
-        return HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/api/database/{database_name}/new")
@@ -262,7 +262,7 @@ async def create_new_database(database_name: str):
         create_database(database_name)
         return {"message": "OK", "database_name": database_name}
     except Exception as e:
-        return HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/api/database/{database_name}", response_model=SourceDirectoryFilePaginated)
@@ -345,7 +345,7 @@ async def query_files(body: QueryLLMBody, llm=Depends(get_llm)):
         }
         return response
     except Exception as e:
-        return HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post('/api/query-web')
@@ -365,7 +365,7 @@ async def query_web(body: QueryWeb, agent=Depends(get_agent)):
         source_documents = []
         for doc in observations:
             content = doc[1]
-            source_documents.append({"content": content, "link": ""})
+            source_documents.append({"content": content, "link": doc[0].tool_input})
 
         answer = result["output"]
         if locale != 'en':
@@ -378,7 +378,7 @@ async def query_web(body: QueryWeb, agent=Depends(get_agent)):
 
         return response
     except Exception as e:
-        return HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/api/upload")
@@ -417,7 +417,7 @@ async def upload_files(request: Request):
             }
             return response
     except Exception as e:
-        return HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/api/translate")
