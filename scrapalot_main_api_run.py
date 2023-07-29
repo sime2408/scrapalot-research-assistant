@@ -75,6 +75,7 @@ class QueryLLMBody(BaseModel):
 class QueryWeb(BaseModel):
     question: str
     locale: str
+    filter_options: QueryBodyFilter
 
 
 class TranslationBody(BaseModel):
@@ -352,6 +353,9 @@ async def query_files(body: QueryLLMBody, llm=Depends(get_llm)):
 async def query_web(body: QueryWeb, agent=Depends(get_agent)):
     question = body.question
     locale = body.locale
+    filter_options = body.filter_options
+    translate_chunks = filter_options.translate_chunks
+
     try:
 
         if locale != 'en':
@@ -365,7 +369,13 @@ async def query_web(body: QueryWeb, agent=Depends(get_agent)):
         source_documents = []
         for doc in observations:
             content = doc[1]
-            source_documents.append({"content": content, "link": doc[0].tool_input})
+            link = doc[0].tool_input
+
+            if translate_chunks:
+                content = GoogleTranslator(source='en', target=locale).translate(content)
+                link = GoogleTranslator(source='en', target=locale).translate(link)
+
+            source_documents.append({"content": content, "link": link})
 
         answer = result["output"]
         if locale != 'en':
