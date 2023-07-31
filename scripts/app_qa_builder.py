@@ -55,7 +55,10 @@ async def process_database_question(database_name, llm, collection_name: Optiona
                 collection_name=collection_name if collection_name else args.collection,
                 client_settings=chromaDB_manager.get_chroma_setting(persist_dir))
 
-    search_kwargs = {"k": ingest_target_source_chunks if ingest_target_source_chunks else args.ingest_target_source_chunks}
+    search_kwargs = {
+        "k": ingest_target_source_chunks if ingest_target_source_chunks else args.ingest_target_source_chunks,
+        "score_threshold": .5
+    }
 
     if filter_document:
         search_kwargs["filter"] = {'source': {'$eq': os.path.join('.', 'source_documents', database_name, filter_document_name)}}
@@ -91,4 +94,7 @@ def process_query(qa: BaseRetrievalQA, query: str, chat_history, chromadb_get_on
         return answer, docs
     except AuthenticationError as e:
         print(f"Warning: Looks like your OPENAI_API_KEY is invalid: {e.error}")
-        return None, []
+        raise e
+    except Exception as ex:
+        print(f"Error: {ex}")
+        raise ex
