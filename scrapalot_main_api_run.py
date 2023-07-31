@@ -1,3 +1,4 @@
+import logging
 import os
 import subprocess
 import sys
@@ -21,6 +22,7 @@ from starlette.responses import FileResponse, HTMLResponse
 from starlette.staticfiles import StaticFiles
 
 from scrapalot_main import get_llm_instance
+from scripts import app_logs
 from scripts.app_environment import chromaDB_manager, api_host, api_port, api_scheme
 from scripts.app_qa_builder import process_database_question, process_query
 
@@ -169,6 +171,7 @@ executor = ThreadPoolExecutor(max_workers=5)
 async def startup_event():
     llm = llm_manager.get_instance()
     web_search.initialize(llm)
+    app_logs.initialize_logging()
 
 
 def get_tools():
@@ -199,7 +202,7 @@ def create_database(database_name):
     os.makedirs(db_path)
     set_key('.env', 'INGEST_SOURCE_DIRECTORY', directory_path)
     set_key('.env', 'INGEST_PERSIST_DIRECTORY', db_path)
-    print(f"Created new database: {directory_path}")
+    logging.debug(f"Created new database: {directory_path}")
     return directory_path, db_path
 
 
@@ -455,6 +458,6 @@ if __name__ == "__main__":
     path = 'api'
     # cert_path = "cert/cert.pem"
     # key_path = "cert/key.pem"
-    print(f"Scrapalot API is now available at {api_scheme}://{api_host}:{api_port}/{path}")
+    logging.debug(f"Scrapalot API is now available at {api_scheme}://{api_host}:{api_port}/{path}")
     uvicorn.run(app, host=api_host, port=int(api_port))
     # uvicorn.run(app, host=host, port=int(port), ssl_keyfile=key_path, ssl_certfile=cert_path)

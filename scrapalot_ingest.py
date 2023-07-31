@@ -185,9 +185,9 @@ def process_and_add_documents(collection, chroma_db, collection_name):
     ignored_files = [metadata['source'] for metadata in collection['metadatas']]
     texts = process_documents(collection_name=collection_name, ignored_files=ignored_files)
     num_elements = len(texts)
-    index_metadata = {"elements": num_elements}
+    collection_metadata = {"elements": num_elements}
     print(f"Creating embeddings. May take some minutes...")
-    chroma_db.add_documents(texts, index_metadata=index_metadata)
+    chroma_db.add_documents(texts, collection_metadata=collection_metadata)
 
 
 def process_and_persist_db(database, collection_name):
@@ -198,14 +198,14 @@ def process_and_persist_db(database, collection_name):
 
 def create_and_persist_db(embeddings, texts, persist_dir, collection_name):
     num_elements = len(texts)
-    index_metadata = {"elements": num_elements}
+    collection_metadata = {"elements": num_elements}
     db = Chroma.from_documents(
         texts,
         embeddings,
         persist_directory=persist_dir,
         collection_name=collection_name,
         client_settings=chromaDB_manager.get_chroma_setting(persist_dir),
-        index_metadata=index_metadata
+        collection_metadata=collection_metadata
     )
     db.persist()
 

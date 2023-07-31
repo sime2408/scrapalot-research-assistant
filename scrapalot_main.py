@@ -64,6 +64,7 @@ def get_llm_instance(*callback_handler: BaseCallbackHandler):
         return GPT4All(
             model=model_path_or_id,
             n_ctx=model_n_ctx,
+            max_tokens=model_n_ctx,
             backend=gpt4all_backend,
             callbacks=callbacks,
             use_mlock=model_use_mlock,
@@ -80,6 +81,7 @@ def get_llm_instance(*callback_handler: BaseCallbackHandler):
             model_path=model_path_or_id,
             temperature=model_temperature,
             n_ctx=model_n_ctx,
+            max_tokens=model_n_ctx,
             top_p=model_top_p,
             n_batch=model_n_batch,
             use_mlock=model_use_mlock,
@@ -94,7 +96,7 @@ def get_llm_instance(*callback_handler: BaseCallbackHandler):
             if not gpu_is_enabled:
                 logging.info("Using Llamacpp for quantized models")
                 model_path = hf_hub_download(local_dir=os.path.abspath('models'), local_dir_use_symlinks=True, repo_id=model_path_or_id, filename=huggingface_model_base_name)
-                return LlamaCpp(model_path=model_path, n_ctx=model_n_ctx, max_tokens=2048, temperature=model_temperature, repeat_penalty=1.15)
+                return LlamaCpp(model_path=model_path, n_ctx=model_n_ctx, max_tokens=model_n_ctx, temperature=model_temperature, repeat_penalty=1.15)
 
             else:
                 logging.info("Using AutoGPTQForCausalLM for quantized models")
