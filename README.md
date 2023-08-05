@@ -405,12 +405,12 @@ You can use the included installer batch file to install the required dependenci
    To install with cuBLAS, set the `LLAMA_CUBLAS=1` environment variable before installing:
 
     ```powershell
-    $Env:CMAKE_ARGS="-DLLAMA_CUBLAS=on"; $Env:FORCE_CMAKE=1; pip3 install llama-cpp-python==0.1.74 --force-reinstall --upgrade --no-cache-dir
+    $Env:CMAKE_ARGS="-DLLAMA_CUBLAS=on"; $Env:CMAKE_ARGS="-DLLAMA_AVX2=off"; $Env:FORCE_CMAKE=1; pip3 install llama-cpp-python==0.1.74 --force-reinstall --upgrade --no-cache-dir
     ```
 
     - Bash:
     ```bash
-    CMAKE_ARGS="-DLLAMA_CUBLAS=on" FORCE_CMAKE=1 pip3 install llama-cpp-python==0.1.74 --force-reinstall --upgrade --no-cache-dir
+    CMAKE_ARGS="-DLLAMA_CUBLAS=on" CMAKE_ARGS="-DLLAMA_AVX2=off" FORCE_CMAKE=1 pip3 install llama-cpp-python==0.1.74 --force-reinstall --upgrade --no-cache-dir
     ```
 
 4. Run `scrapalot_ingest.py` and `scrapalot_main.py` as usual

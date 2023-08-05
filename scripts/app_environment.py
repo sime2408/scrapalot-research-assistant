@@ -105,7 +105,7 @@ huggingface_model_base_name = os.environ.get("MODEL_HF_BASE_NAME")
 gpt4all_backend = os.environ.get("GPT4ALL_BACKEND", "gptj")
 
 # Setting specific for LLAMA GPU models
-gpu_is_enabled = "true" if is_cuda_available() else "false"
+gpu_is_enabled = True if is_cuda_available() else False
 
 # Setting specific for a database
 db_get_only_relevant_docs = os.environ.get("DB_GET_ONLY_RELEVANT_DOCS", "false") == "true"
