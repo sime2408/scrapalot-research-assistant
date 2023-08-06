@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import glob
 import os
+import re
 import sys
 from multiprocessing import Pool
 from time import monotonic
@@ -79,17 +80,32 @@ def process_documents(collection_name: Optional[str] = None, ignored_files: List
 
 def does_vectorstore_exist(persist_directory: str) -> bool:
     """
-    Checks if a Chroma vectorstore already exists in the given directory.
-    :param persist_directory: The path of the vectorstore directory.
-    :return: True if the vectorstore exists, False otherwise.
+    Checks if the required structure exists in the given directory.
+
+    The structure is defined as:
+    - A directory in UUID format.
+    - Inside the UUID directory: some .bin files and a .pickle file.
+    - A .sqlite3 file in the persisted directory.
+
+    :param persist_directory: The path of the directory to check.
+    :return: True if the structure exists, False otherwise.
     """
-    if os.path.exists(os.path.join(persist_directory, 'index')):
-        if os.path.exists(os.path.join(persist_directory, 'chroma-collections.parquet')) and os.path.exists(os.path.join(persist_directory, 'chroma-embeddings.parquet')):
-            list_index_files = glob.glob(os.path.join(persist_directory, 'index/*.bin'))
-            list_index_files += glob.glob(os.path.join(persist_directory, 'index/*.pkl'))
-            # At least 3 documents are needed in a working vectorstore
-            if len(list_index_files) > 3:
-                return True
+
+    # Check if there's a .sqlite3 file in the persist_directory
+    if not glob.glob(os.path.join(persist_directory, '*.sqlite3')):
+        return False
+
+    # Check for UUID formatted directories
+    uuid_pattern = re.compile(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')
+    uuid_directories = [d for d in os.listdir(persist_directory) if os.path.isdir(os.path.join(persist_directory, d)) and uuid_pattern.match(d)]
+
+    for uuid_dir in uuid_directories:
+        bin_files = glob.glob(os.path.join(persist_directory, uuid_dir, '*.bin'))
+        pickle_files = glob.glob(os.path.join(persist_directory, uuid_dir, '*.pickle'))
+
+        if bin_files and pickle_files:
+            return True
+
     return False
 
 
@@ -109,8 +125,8 @@ def prompt_user():
         :param directory_name: The name for the new directory.
         :return: The path of the new directory and the path of the database directory.
         """
-        directory_path = f"./source_documents/{directory_name}"
-        db_path = f"./db/{directory_name}"
+        directory_path = os.path.join(".", "source_documents", directory_name)
+        db_path = os.path.join(".", "db", directory_name)
         os.makedirs(directory_path)
         os.makedirs(db_path)
         set_key('.env', 'INGEST_SOURCE_DIRECTORY', directory_path)
@@ -136,8 +152,8 @@ def prompt_user():
                     break
                 try:
                     selected_directory = directories[int(existing_directory) - 1]
-                    selected_directory_path = f"./source_documents/{selected_directory}"
-                    selected_db_path = f"./db/{selected_directory}"
+                    selected_directory_path = os.path.join(".", "source_documents", selected_directory)
+                    selected_db_path = os.path.join(".", "db", selected_directory)
                     if not os.listdir(selected_directory_path):
                         print(f"\033[91m\033[1m[!]\033[0m Selected directory: '{selected_directory}' is empty \033[91m\033[1m[!]\033[0m")
                         directories = display_directories()  # Display directories again if the selected one is empty
@@ -165,7 +181,7 @@ def prompt_user():
 
 
 def create_embeddings():
-    embeddings_kwargs = {'device': 'cuda'} if gpu_is_enabled else {}
+    embeddings_kwargs = {'device': 'cuda'} if gpu_is_enabled else {'device': 'cpu'}
     return HuggingFaceInstructEmbeddings(
         model_name=ingest_embeddings_model if ingest_embeddings_model else args.ingest_embeddings_model,
         model_kwargs=embeddings_kwargs
@@ -177,7 +193,8 @@ def get_chroma(collection_name: str, embeddings, persist_dir):
         persist_directory=persist_dir,
         collection_name=collection_name,
         embedding_function=embeddings,
-        client_settings=chromaDB_manager.get_chroma_setting(persist_dir)
+        client_settings=chromaDB_manager.get_chroma_setting(persist_dir),
+        client=chromaDB_manager.get_client(collection_name),
     )
 
 
@@ -193,21 +210,20 @@ def process_and_add_documents(collection, chroma_db, collection_name):
 def process_and_persist_db(database, collection_name):
     print(f"Collection: {collection_name}")
     process_and_add_documents(database.get(), database, collection_name)
-    database.persist()
 
 
 def create_and_persist_db(embeddings, texts, persist_dir, collection_name):
     num_elements = len(texts)
     collection_metadata = {"elements": num_elements}
-    db = Chroma.from_documents(
-        texts,
-        embeddings,
+    Chroma.from_documents(
+        documents=texts,
+        embedding=embeddings,
         persist_directory=persist_dir,
         collection_name=collection_name,
         client_settings=chromaDB_manager.get_chroma_setting(persist_dir),
+        client=chromaDB_manager.get_client(collection_name),
         collection_metadata=collection_metadata
     )
-    db.persist()
 
 
 def main(source_dir: str, persist_dir: str, db_name: str, sub_collection_name: Optional[str] = None):

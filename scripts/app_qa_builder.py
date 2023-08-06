@@ -53,7 +53,8 @@ async def process_database_question(database_name, llm, collection_name: Optiona
     db = Chroma(persist_directory=persist_dir,
                 embedding_function=embeddings,
                 collection_name=collection_name if collection_name else args.collection,
-                client_settings=chromaDB_manager.get_chroma_setting(persist_dir))
+                client_settings=chromaDB_manager.get_chroma_setting(persist_dir),
+                client=chromaDB_manager.get_client(collection_name))
 
     search_kwargs = {
         "k": ingest_target_source_chunks if ingest_target_source_chunks else args.ingest_target_source_chunks,

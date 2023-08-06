@@ -203,15 +203,14 @@ class ChromaDBClientManager:
     @staticmethod
     def get_chroma_setting(persist_dir: str):
         return Settings(
-            chroma_db_impl='duckdb+parquet',
             persist_directory=persist_dir,
             anonymized_telemetry=False
         )
 
     def get_client(self, database_name: str):
         if database_name not in self.clients:
-            persist_directory = f"./db/{database_name}"
-            self.clients[database_name] = chromadb.Client(self.get_chroma_setting(persist_directory))
+            persist_directory = os.path.join(".", "db", database_name)
+            self.clients[database_name] = chromadb.PersistentClient(path=persist_directory, settings=self.get_chroma_setting(persist_directory))
         return self.clients[database_name]
 
 
