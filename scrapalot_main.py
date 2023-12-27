@@ -59,7 +59,7 @@ def get_llm_instance(*callback_handler: BaseCallbackHandler):
 
     if model_type == "gpt4all":
         if gpu_is_enabled:
-            logging.warn("GPU is enabled, but GPT4All does not support GPU acceleration. Please use LlamaCpp instead.")
+            logging.warning("GPU is enabled, but GPT4All does not support GPU acceleration. Please use LlamaCpp instead.")
             exit(1)
         return GPT4All(
             model=model_path_or_id,

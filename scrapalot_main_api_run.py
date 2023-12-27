@@ -196,7 +196,7 @@ def list_of_collections(database_name: str):
 
 
 def create_database(database_name):
-    directory_path = os.path.join(".", "source_documents", database_name);
+    directory_path = os.path.join(".", "source_documents", database_name)
     db_path = f"./db/{database_name}"
     os.makedirs(directory_path)
     os.makedirs(db_path)
@@ -209,7 +209,7 @@ def create_database(database_name):
 async def get_files_from_dir(database: str, page: int, items_per_page: int) -> Tuple[List[SourceDirectoryFile], int]:
     all_files = []
 
-    for root, dirs, files in os.walk(database):
+    for r, dirs, files in os.walk(database):
         for file in sorted(files, reverse=True):  # Sort files in descending order.
             if not file.startswith('.'):
                 all_files.append(SourceDirectoryFile(id=str(uuid.uuid4()), name=file))
@@ -448,6 +448,7 @@ def home():
 
 @app.get("/{catch_all:path}")
 def read_root(catch_all: str):
+    logging.debug(f'Browsing through: {catch_all}')
     return FileResponse('scrapalot-research-assistant-ui/index.html')
 
 

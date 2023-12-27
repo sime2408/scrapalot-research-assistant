@@ -26,7 +26,7 @@ from scripts.app_environment import (
 from scripts.app_utils import display_directories, LOADER_MAPPING, load_single_document
 
 
-def load_documents(source_dir: str, collection_name: Optional[str], ignored_files: List[str] = []) -> List[Document]:
+def load_documents(source_dir: str, collection_name: Optional[str], ignored_files=None) -> List[Document]:
     """
     Loads all documents from the source documents directory, ignoring specified files.
     :param source_dir: The path of the source documents directory.
@@ -34,6 +34,8 @@ def load_documents(source_dir: str, collection_name: Optional[str], ignored_file
     :param ignored_files: A list of filenames to be ignored.
     :return: A list of Document objects loaded from the source documents.
     """
+    if ignored_files is None:
+        ignored_files = []
     collection_dir = os.path.join(source_dir, collection_name) if collection_name else source_dir
     print(f"Loading documents from {collection_dir}")
     all_files = []
